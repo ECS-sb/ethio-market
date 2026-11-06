@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Form from "next/form";
-import Link from "next/link";
 import { MenuIcon, SearchIcon } from "lucide-react";
-import { Brand } from "@/components/brand";
 import { useCompare } from "@/components/compare-store";
+import { LocaleLink, useLocale, useT } from "@/components/i18n-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,70 +15,88 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { localePath, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-const links = [
-  { href: "/accounts", label: "ገበያ" },
-  { href: "/sell", label: "ይሽጡ" },
-  { href: "/how-it-works", label: "እንዴት ይሰራል" },
-  { href: "/sellers", label: "ሻጮች" },
-  { href: "/faq", label: "ጥያቄዎች" },
+const links: { href: string; label: MessageKey }[] = [
+  { href: "/accounts", label: "Market" },
+  { href: "/sell", label: "Sell" },
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/sellers", label: "Sellers" },
+  { href: "/faq", label: "FAQ" },
 ];
 
-export function SiteHeader({ authSlot }: { authSlot: React.ReactNode }) {
+const mobileExtras: { href: string; label: MessageKey }[] = [
+  { href: "/compare", label: "Compare" },
+  { href: "/dashboard", label: "Dashboard" },
+];
+
+export function SiteHeader({
+  brand,
+  languageSlot,
+  authSlot,
+}: {
+  brand: React.ReactNode;
+  languageSlot: React.ReactNode;
+  authSlot: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const { ids } = useCompare();
+  const t = useT();
+  const locale = useLocale();
+  const searchAction = localePath(locale, "/accounts");
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-6 px-6 py-4">
-        <Brand className="shrink-0" />
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-2 px-4 py-4 sm:gap-6 sm:px-6">
+        {brand}
 
-        <nav aria-label="ዋና" className="hidden items-center gap-6 lg:flex">
+        <nav aria-label={t("Main")} className="hidden items-center gap-6 lg:flex">
           {links.map((link) => (
-            <Link
+            <LocaleLink
               key={link.href}
               href={link.href}
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              {link.label}
-            </Link>
+              {t(link.label)}
+            </LocaleLink>
           ))}
         </nav>
 
-        <Form action="/accounts" role="search" className="relative ml-auto hidden w-64 xl:block">
+        <Form action={searchAction} role="search" className="relative ml-auto hidden w-56 xl:block">
           <SearchIcon className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input name="q" aria-label="አካውንት ፈልግ" placeholder="አካውንት ፈልግ…" className="pl-10" />
+          <Input name="q" aria-label={t("Search accounts")} placeholder={t("Search accounts…")} className="pl-10" />
         </Form>
 
         <div className="ml-auto flex items-center gap-2 xl:ml-0">
-          <Link href="/compare" className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
-            አወዳድር
+          {languageSlot}
+          <LocaleLink href="/compare" className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
+            {t("Compare")}
             {ids.length > 0 ? <Badge>{ids.length}</Badge> : null}
-          </Link>
+          </LocaleLink>
           {authSlot}
 
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger render={<Button variant="outline" size="icon" aria-label="ምናሌ ክፈት" className="size-10 lg:hidden" />}>
+            <SheetTrigger render={<Button variant="outline" size="icon" aria-label={t("Open menu")} className="size-10 lg:hidden" />}>
               <MenuIcon />
             </SheetTrigger>
             <SheetContent side="right">
               <SheetHeader>
-                <SheetTitle>ምናሌ</SheetTitle>
+                <SheetTitle>{t("Menu")}</SheetTitle>
               </SheetHeader>
-              <nav aria-label="የሞባይል" className="flex flex-col gap-2 px-4 pb-6">
-                <Form action="/accounts" role="search" className="pb-2" onSubmit={() => setOpen(false)}>
-                  <Input name="q" aria-label="አካውንት ፈልግ" placeholder="አካውንት ፈልግ…" />
+              <nav aria-label={t("Mobile")} className="flex flex-col gap-2 px-4 pb-6">
+                <Form action={searchAction} role="search" className="pb-2" onSubmit={() => setOpen(false)}>
+                  <Input name="q" aria-label={t("Search accounts")} placeholder={t("Search accounts…")} />
                 </Form>
-                {[...links, { href: "/compare", label: "አወዳድር" }, { href: "/dashboard", label: "ዳሽቦርድ" }].map((link) => (
-                  <Link
+                {[...links, ...mobileExtras].map((link) => (
+                  <LocaleLink
                     key={link.href}
                     href={link.href}
                     onClick={() => setOpen(false)}
                     className="rounded-xl px-4 py-3 text-sm transition-colors hover:bg-muted"
                   >
-                    {link.label}
-                  </Link>
+                    {t(link.label)}
+                  </LocaleLink>
                 ))}
               </nav>
             </SheetContent>

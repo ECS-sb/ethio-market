@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useLocale, useT } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { localePath } from "@/lib/i18n";
 
 export function GoogleSignIn({ next }: { next: string }) {
   const [pending, setPending] = useState(false);
+  const t = useT();
+  const locale = useLocale();
 
   return (
     <Button
@@ -17,10 +21,10 @@ export function GoogleSignIn({ next }: { next: string }) {
       disabled={pending}
       onClick={async () => {
         setPending(true);
-        const { error } = await authClient.signIn.social({ provider: "google", callbackURL: next });
+        const { error } = await authClient.signIn.social({ provider: "google", callbackURL: localePath(locale, next) });
         if (error) {
           setPending(false);
-          toast.error("መግባት አልተቻለም፤ እባክዎ እንደገና ይሞክሩ።");
+          toast.error(t("Couldn't sign in. Please try again."));
         }
       }}
     >
@@ -30,7 +34,7 @@ export function GoogleSignIn({ next }: { next: string }) {
         <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.2a12 12 0 0 0 0 10.8z" />
         <path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A11.9 11.9 0 0 0 1.2 6.6l4.1 3.1c.9-2.8 3.6-4.9 6.7-4.9z" />
       </svg>
-      {pending ? "በመክፈት ላይ…" : "Continue with Google"}
+      {pending ? t("Opening…") : t("Continue with Google")}
     </Button>
   );
 }

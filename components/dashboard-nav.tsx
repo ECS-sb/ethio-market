@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   FlagIcon,
@@ -14,60 +13,67 @@ import {
   ShoppingBagIcon,
   StoreIcon,
   UsersIcon,
+  type LucideIcon,
 } from "lucide-react";
+import { LocaleLink, useT } from "@/components/i18n-provider";
+import { stripLocale } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/messages";
 import { cn } from "@/lib/utils";
 
-const groups = {
+type Group = { title: MessageKey; items: { href: string; label: MessageKey; icon: LucideIcon }[] };
+
+const groups: Record<"user" | "admin", Group[]> = {
   user: [
     {
-      title: "ገዢ",
+      title: "Buyer",
       items: [
-        { href: "/dashboard/buyer", label: "ቅናሾቼ", icon: ShoppingBagIcon },
-        { href: "/dashboard/buyer/orders", label: "ግዢዎቼ", icon: ReceiptIcon },
+        { href: "/dashboard/buyer", label: "My offers", icon: ShoppingBagIcon },
+        { href: "/dashboard/buyer/orders", label: "My purchases", icon: ReceiptIcon },
       ],
     },
     {
-      title: "ሻጭ",
+      title: "Seller",
       items: [
-        { href: "/dashboard/seller", label: "ማስታወቂያዎቼ", icon: StoreIcon },
-        { href: "/dashboard/seller/offers", label: "የመጡ ቅናሾች", icon: HandCoinsIcon },
-        { href: "/dashboard/seller/orders", label: "ሽያጮቼ", icon: ListIcon },
+        { href: "/dashboard/seller", label: "My listings", icon: StoreIcon },
+        { href: "/dashboard/seller/offers", label: "Received offers", icon: HandCoinsIcon },
+        { href: "/dashboard/seller/orders", label: "My sales", icon: ListIcon },
       ],
     },
     {
-      title: "መለያ",
+      title: "Account",
       items: [
-        { href: "/dashboard/messages", label: "መልዕክቶች", icon: MessageCircleIcon },
-        { href: "/dashboard/settings", label: "ቅንብሮች", icon: SettingsIcon },
+        { href: "/dashboard/messages", label: "Messages", icon: MessageCircleIcon },
+        { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
       ],
     },
   ],
   admin: [
     {
-      title: "አድሚን",
+      title: "Admin",
       items: [
-        { href: "/admin", label: "አጠቃላይ", icon: LayoutDashboardIcon },
-        { href: "/admin/listings", label: "ማስታወቂያ ግምገማ", icon: ListChecksIcon },
-        { href: "/admin/orders", label: "ትዕዛዞች", icon: ReceiptIcon },
-        { href: "/admin/users", label: "ተጠቃሚዎች", icon: UsersIcon },
-        { href: "/admin/reports", label: "ሪፖርቶች", icon: FlagIcon },
+        { href: "/admin", label: "Overview", icon: LayoutDashboardIcon },
+        { href: "/admin/listings", label: "Listing review", icon: ListChecksIcon },
+        { href: "/admin/orders", label: "Orders", icon: ReceiptIcon },
+        { href: "/admin/users", label: "Users", icon: UsersIcon },
+        { href: "/admin/reports", label: "Reports", icon: FlagIcon },
       ],
     },
   ],
 };
 
 export function DashboardNav({ area }: { area: keyof typeof groups }) {
-  const pathname = usePathname();
+  const t = useT();
+  const pathname = stripLocale(usePathname());
 
   return (
-    <nav aria-label="ዳሽቦርድ" className="flex gap-4 overflow-x-auto [scrollbar-width:none] lg:flex-col">
+    <nav aria-label={t("Dashboard")} className="flex gap-4 overflow-x-auto [scrollbar-width:none] lg:flex-col">
       {groups[area].map((group) => (
         <div key={group.title} className="flex shrink-0 items-center gap-2 lg:flex-col lg:items-stretch">
-          <p className="hidden px-4 pt-2 text-xs font-semibold text-muted-foreground lg:block">{group.title}</p>
+          <p className="hidden px-4 pt-2 text-xs font-semibold text-muted-foreground lg:block">{t(group.title)}</p>
           {group.items.map((item) => {
             const active = pathname === item.href || (item.href === "/dashboard/messages" && pathname.startsWith(item.href));
             return (
-              <Link
+              <LocaleLink
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
@@ -77,8 +83,8 @@ export function DashboardNav({ area }: { area: keyof typeof groups }) {
                 )}
               >
                 <item.icon className="size-4" />
-                {item.label}
-              </Link>
+                {t(item.label)}
+              </LocaleLink>
             );
           })}
         </div>

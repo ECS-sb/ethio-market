@@ -21,11 +21,15 @@ const publicSelect = {
   joinedYear: true,
   originalEmail: true,
   special: true,
+  monetized: true,
+  strikeFree: true,
+  noAdsense: true,
   description: true,
   status: true,
   createdAt: true,
   sellerId: true,
   seller: { select: { name: true, verifiedSeller: true, createdAt: true } },
+  images: { select: { id: true, width: true, height: true }, orderBy: { position: "asc" } },
 } satisfies Prisma.ListingSelect;
 
 type PublicRow = Prisma.ListingGetPayload<{ select: typeof publicSelect }>;
@@ -138,6 +142,22 @@ export async function getListingForViewer(id: string, viewer: { id: string; isAd
   const isOwner = viewer?.id === row.sellerId;
   if (!PUBLIC_STATUSES.includes(row.status) && !isOwner && !viewer?.isAdmin) return null;
   return { listing: toPublic(row), isOwner };
+}
+
+/** ምስሉ የሚመለሰው ማስታወቂያው ለሕዝብ የሚታይ ከሆነ ወይም ተመልካቹ ባለቤቱ/አድሚን ከሆነ ብቻ ነው። */
+export async function getListingImage(id: string, variant: "full" | "thumb", getViewer: () => Promise<{ id: string; isAdmin: boolean } | null>) {
+  const isThumb = variant === "thumb";
+  const row = await db.listingImage.findUnique({
+    where: { id },
+    select: { data: !isThumb, thumb: isThumb, listing: { select: { status: true, sellerId: true } } },
+  });
+  if (!row) return null;
+  const isPublic = PUBLIC_STATUSES.includes(row.listing.status);
+  if (!isPublic) {
+    const viewer = await getViewer();
+    if (viewer?.id !== row.listing.sellerId && !viewer?.isAdmin) return null;
+  }
+  return { bytes: isThumb ? row.thumb : row.data, isPublic };
 }
 
 export async function getSimilarListings(listing: PublicListing, take = 3) {
@@ -357,7 +377,10 @@ export async function getPendingListings() {
   return db.listing.findMany({
     where: { status: "PENDING" },
     orderBy: { createdAt: "asc" },
-    include: { seller: { select: { name: true, email: true } } },
+    include: {
+      seller: { select: { name: true, email: true } },
+      images: { select: { id: true, width: true, height: true }, orderBy: { position: "asc" } },
+    },
   });
 }
 

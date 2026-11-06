@@ -3,6 +3,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { isLocale, localePath, type Locale } from "@/lib/i18n";
 
 export type CurrentUser = {
   id: string;
@@ -37,6 +38,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   };
 });
 
+/** በproxy.ts የሚላክ ቋንቋ፤ በServer Actions ውስጥም ይሰራል። */
+export async function requestLocale(): Promise<Locale> {
+  const value = (await headers()).get("x-locale");
+  return isLocale(value) ? value : "en";
+}
+
 export function safeNextPath(value: string | null | undefined): string {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/dashboard";
   return value;
@@ -44,8 +51,8 @@ export function safeNextPath(value: string | null | undefined): string {
 
 export async function requireUser(next = "/dashboard"): Promise<CurrentUser> {
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
-  if (user.suspended) redirect("/login?error=suspended");
+  if (!user) redirect(localePath(await requestLocale(), `/login?next=${encodeURIComponent(next)}`));
+  if (user.suspended) redirect(localePath(await requestLocale(), "/login?error=suspended"));
   return user;
 }
 

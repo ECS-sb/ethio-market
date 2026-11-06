@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
+import { useT } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import type { ActionResult } from "@/lib/actions";
 
@@ -19,13 +20,14 @@ export function ActionForm({
   onSuccess?: (result: ActionResult) => void;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const [, dispatch] = useActionState(async (_: ActionResult | null, data: FormData) => {
     const result = await action(data);
     if (result.ok) {
-      toast.success(result.message);
+      toast.success(t(result.message));
       onSuccess?.(result);
     } else {
-      toast.error(result.message);
+      toast.error(t(result.message));
     }
     return result;
   }, null);
@@ -38,10 +40,11 @@ export function ActionForm({
 }
 
 export function SubmitButton({ children, ...props }: React.ComponentProps<typeof Button>) {
+  const t = useT();
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} {...props}>
-      {pending ? "በመላክ ላይ…" : children}
+      {pending ? t("Sending…") : children}
     </Button>
   );
 }

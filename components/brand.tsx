@@ -1,16 +1,16 @@
 import Image from "next/image";
-import Link from "next/link";
+import { LocaleLink } from "@/components/i18n-provider";
 import { cn } from "@/lib/utils";
 
 export function Brand({ className }: { className?: string }) {
   return (
-    <Link href="/" aria-label="Ethio Market" className={cn("flex items-center gap-2", className)}>
+    <LocaleLink href="/" aria-label="Ethio Market" className={cn("flex items-center gap-2", className)}>
       <Image src="/brand/logo-mark.svg" alt="" width={40} height={40} className="size-10" />
       <span className="flex flex-col leading-none">
         <span className="font-heading text-xl font-extrabold tracking-tight text-primary">Ethio</span>
         <span className="text-xs font-semibold tracking-wide">MARKET</span>
       </span>
-    </Link>
+    </LocaleLink>
   );
 }
 
@@ -34,14 +34,6 @@ export function GridBackdrop() {
       <div className="absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_oklab,var(--foreground)_7%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--foreground)_7%,transparent)_1px,transparent_1px)] bg-size-[72px_72px] mask-[linear-gradient(to_bottom,black,transparent_70rem)]" />
       <div className="absolute inset-x-0 top-0 h-[48rem] bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,color-mix(in_oklab,var(--primary)_16%,transparent),transparent_70%)]" />
     </div>
-  );
-}
-
-export function SampleNotice({ className }: { className?: string }) {
-  return (
-    <p className={cn("text-xs text-muted-foreground", className)}>
-      ይህ ምስል ለምሳሌ የቀረበ ነው፤ እውነተኛ አካውንትን አይወክልም።
-    </p>
   );
 }
 

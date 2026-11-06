@@ -1,30 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { XIcon } from "lucide-react";
 import { useCompare } from "@/components/compare-store";
+import { LocaleLink, useT } from "@/components/i18n-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { categories, countries, formatCount, formatPrice, getPlatform, labelOf, listingStatusLabels } from "@/lib/catalog";
+import type { T } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/messages";
 import type { PublicListing } from "@/lib/queries";
 
-const rows: { label: string; value: (listing: PublicListing) => string }[] = [
-  { label: "መድረክ", value: (listing) => getPlatform(listing.platform)?.name ?? "" },
-  { label: "ዋጋ", value: (listing) => formatPrice(listing.priceEtb) },
-  { label: "ተከታዮች", value: (listing) => formatCount(listing.followers) },
-  { label: "ተሳትፎ", value: (listing) => (listing.engagement === null ? "—" : `${listing.engagement}%`) },
-  { label: "ልጥፎች", value: (listing) => (listing.posts === null ? "—" : formatCount(listing.posts)) },
-  { label: "ዘርፍ", value: (listing) => labelOf(categories, listing.category) },
-  { label: "ዋና ሀገር", value: (listing) => labelOf(countries, listing.country) },
-  { label: "የተከፈተበት ዓመት", value: (listing) => (listing.joinedYear === null ? "—" : String(listing.joinedYear)) },
-  { label: "የመጀመሪያ ኢሜይል", value: (listing) => (listing.originalEmail ? "ይካተታል" : "አይካተትም") },
-  { label: "ሁኔታ", value: (listing) => listingStatusLabels[listing.status] },
-  { label: "ሻጭ", value: (listing) => listing.sellerName },
+const rows: { label: MessageKey; value: (listing: PublicListing, t: T) => string }[] = [
+  { label: "Platform", value: (listing) => getPlatform(listing.platform)?.name ?? "" },
+  { label: "Price", value: (listing, t) => formatPrice(t, listing.priceEtb) },
+  { label: "Followers", value: (listing) => formatCount(listing.followers) },
+  { label: "Engagement", value: (listing) => (listing.engagement === null ? "—" : `${listing.engagement}%`) },
+  { label: "Posts", value: (listing) => (listing.posts === null ? "—" : formatCount(listing.posts)) },
+  { label: "Category", value: (listing, t) => t(labelOf(categories, listing.category)) },
+  { label: "Main country", value: (listing, t) => t(labelOf(countries, listing.country)) },
+  { label: "Year created", value: (listing) => (listing.joinedYear === null ? "—" : String(listing.joinedYear)) },
+  { label: "Original email", value: (listing, t) => (listing.originalEmail ? t("Included") : t("Not included")) },
+  { label: "Status", value: (listing, t) => t(listingStatusLabels[listing.status]) },
+  { label: "Seller", value: (listing) => listing.sellerName },
 ];
 
 export function CompareTable() {
+  const t = useT();
   const { ids, toggle, clear } = useCompare();
   const key = ids.join(",");
   const [loaded, setLoaded] = useState<{ key: string; items: PublicListing[] } | null>(null);
@@ -46,11 +49,11 @@ export function CompareTable() {
   if (ids.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-xl bg-card/70 p-12 text-center ring-1 ring-foreground/10">
-        <p className="font-semibold">ለማወዳደር ገና አካውንት አልመረጡም</p>
-        <p className="text-sm text-muted-foreground">በገበያው ውስጥ “አወዳድር” የሚለውን ይጫኑ።</p>
-        <Link href="/accounts" className={buttonVariants()}>
-          ወደ ገበያው ይሂዱ
-        </Link>
+        <p className="font-semibold">{t("You haven't chosen any accounts to compare")}</p>
+        <p className="text-sm text-muted-foreground">{t("Press “Compare” in the market.")}</p>
+        <LocaleLink href="/accounts" className={buttonVariants()}>
+          {t("Go to the market")}
+        </LocaleLink>
       </div>
     );
   }
@@ -64,14 +67,19 @@ export function CompareTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>መስፈርት</TableHead>
+              <TableHead>{t("Criteria")}</TableHead>
               {items.map((listing) => (
                 <TableHead key={listing.id}>
                   <div className="flex items-center gap-2 py-2">
-                    <Link href={`/accounts/${listing.id}`} className="hover:underline" dir="ltr">
+                    <LocaleLink href={`/accounts/${listing.id}`} className="hover:underline" dir="ltr">
                       @{listing.handle}
-                    </Link>
-                    <Button variant="ghost" size="icon-xs" aria-label={`@${listing.handle} አስወግድ`} onClick={() => toggle(listing.id)}>
+                    </LocaleLink>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={t("Remove @{handle}", { handle: listing.handle })}
+                      onClick={() => toggle(listing.id)}
+                    >
                       <XIcon />
                     </Button>
                   </div>
@@ -82,9 +90,9 @@ export function CompareTable() {
           <TableBody>
             {rows.map((row) => (
               <TableRow key={row.label}>
-                <TableCell className="text-muted-foreground">{row.label}</TableCell>
+                <TableCell className="text-muted-foreground">{t(row.label)}</TableCell>
                 {items.map((listing) => (
-                  <TableCell key={listing.id}>{row.value(listing)}</TableCell>
+                  <TableCell key={listing.id}>{row.value(listing, t)}</TableCell>
                 ))}
               </TableRow>
             ))}
@@ -92,7 +100,7 @@ export function CompareTable() {
         </Table>
       </div>
       <Button variant="outline" className="w-fit" onClick={clear}>
-        ሁሉንም አስወግድ
+        {t("Remove all")}
       </Button>
     </div>
   );

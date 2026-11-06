@@ -1,11 +1,13 @@
 import { formatCount, growthLabels } from "@/lib/catalog";
+import { getT } from "@/lib/i18n-server";
 import { cn } from "@/lib/utils";
 
 const WIDTH = 640;
 const HEIGHT = 220;
 const PAD = 12;
 
-export function GrowthChart({ values, className }: { values: number[]; className?: string }) {
+export async function GrowthChart({ values, className }: { values: number[]; className?: string }) {
+  const t = await getT();
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
@@ -22,7 +24,7 @@ export function GrowthChart({ values, className }: { values: number[]; className
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         role="img"
-        aria-label={`የተከታዮች ዕድገት፦ ከ${formatCount(values[0])} ወደ ${formatCount(values[values.length - 1])}`}
+        aria-label={t("Follower growth from {from} to {to}", { from: formatCount(values[0]), to: formatCount(values[values.length - 1]) })}
         className="h-auto w-full"
       >
         <path d={area} className="fill-primary/10" />
@@ -31,7 +33,7 @@ export function GrowthChart({ values, className }: { values: number[]; className
       </svg>
       <div className="flex justify-between text-xs text-muted-foreground" aria-hidden>
         {growthLabels.map((label) => (
-          <span key={label}>{label}</span>
+          <span key={label}>{t(label)}</span>
         ))}
       </div>
     </figure>

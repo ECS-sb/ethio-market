@@ -121,6 +121,9 @@ model Listing {
   joinedYear       Int?
   originalEmail    Boolean       @default(false)
   special          Boolean       @default(false)
+  monetized        Boolean       @default(false)
+  strikeFree       Boolean       @default(false)
+  noAdsense        Boolean       @default(false)
   description      String        @default("")
   verificationCode String
   status           ListingStatus @default(PENDING)
@@ -132,11 +135,27 @@ model Listing {
   orders        Order[]
   conversations Conversation[]
   reports       Report[]
+  images        ListingImage[]
 
   @@index([status, createdAt])
   @@index([sellerId])
   @@index([platform, username])
   @@map("listing")
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  position  Int
+  width     Int
+  height    Int
+  data      Bytes
+  thumb     Bytes
+  createdAt DateTime @default(now())
+
+  @@unique([listingId, position])
+  @@map("listing_image")
 }
 
 model Offer {

@@ -3,12 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { categories, countries, platforms, reportReasons } from "@/lib/catalog";
+import { categories, countries, MAX_SCREENSHOT_BYTES, MAX_SCREENSHOTS, platforms, reportReasons } from "@/lib/catalog";
 import { db } from "@/lib/db";
+import { localePath } from "@/lib/i18n";
+import { optimizeScreenshot } from "@/lib/images";
 import * as market from "@/lib/marketplace";
-import { requireAdmin, requireUser } from "@/lib/session";
+import type { MessageKey } from "@/lib/messages";
+import { requestLocale, requireAdmin, requireUser } from "@/lib/session";
 
-export type ActionResult = { ok: boolean; message: string; code?: string; id?: string };
+export type ActionResult = { ok: boolean; message: MessageKey; code?: string; id?: string };
 
 const inList = (options: { value: string }[]) => z.string().refine((value) => options.some((option) => option.value === value));
 const id = z.string().min(1).max(64);
@@ -16,17 +19,17 @@ const money = z.coerce.number().int().min(1).max(1_000_000_000);
 const optionalNumber = <T extends z.ZodType>(schema: T) =>
   z.preprocess((value) => (value === "" || value === null || value === undefined ? undefined : value), schema.optional());
 
-const INVALID: ActionResult = { ok: false, message: "ያስገቡትን መረጃ አረጋግጠው እንደገና ይሞክሩ።" };
+const INVALID: ActionResult = { ok: false, message: "Check what you entered and try again." };
 
-async function run(message: string, work: () => Promise<Partial<ActionResult> | void>): Promise<ActionResult> {
+async function run(message: MessageKey, work: () => Promise<Partial<ActionResult> | void>): Promise<ActionResult> {
   try {
     const extra = await work();
     revalidatePath("/", "layout");
     return { ok: true, message, ...(extra ?? {}) };
   } catch (error) {
-    if (error instanceof market.DomainError) return { ok: false, message: error.message };
+    if (error instanceof market.DomainError) return { ok: false, message: error.key };
     console.error(error);
-    return { ok: false, message: "ችግር ተፈጥሯል፤ እባክዎ እንደገና ይሞክሩ።" };
+    return { ok: false, message: "Something went wrong. Please try again." };
   }
 }
 
@@ -52,8 +55,20 @@ export async function createListingAction(data: FormData): Promise<ActionResult>
   if (!parsed.success) return INVALID;
   const originalEmail = data.get("originalEmail") === "on";
   const special = data.get("special") === "on";
-  return run("ማስታወቂያው ለግምገማ ተልኳል።", async () => {
-    const created = await market.createListing(user, { ...parsed.data, originalEmail, special });
+  const isYoutube = parsed.data.platform === "youtube";
+  const youtube = {
+    monetized: isYoutube && data.get("monetized") === "on",
+    strikeFree: isYoutube && data.get("strikeFree") === "on",
+    noAdsense: isYoutube && data.get("noAdsense") === "on",
+  };
+
+  const screenshots = data.getAll("screenshots").filter((entry): entry is File => entry instanceof File && entry.size > 0);
+  if (screenshots.length < 1 || screenshots.length > MAX_SCREENSHOTS) return { ok: false, message: "Add 1 to 4 screenshots." };
+  if (screenshots.some((file) => file.size > MAX_SCREENSHOT_BYTES)) return { ok: false, message: "This image is too large." };
+
+  return run("Your listing was sent for review.", async () => {
+    const images = await Promise.all(screenshots.map(optimizeScreenshot));
+    const created = await market.createListing(user, { ...parsed.data, originalEmail, special, ...youtube }, images);
     return { code: created.verificationCode, id: created.id };
   });
 }
@@ -62,14 +77,14 @@ export async function updatePriceAction(data: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = z.object({ id, priceEtb: money }).safeParse({ id: field(data, "id"), priceEtb: field(data, "priceEtb") });
   if (!parsed.success) return INVALID;
-  return run("ዋጋው ተቀይሯል።", () => market.updateListingPrice(user, parsed.data.id, parsed.data.priceEtb));
+  return run("Price updated.", () => market.updateListingPrice(user, parsed.data.id, parsed.data.priceEtb));
 }
 
 export async function archiveListingAction(data: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = id.safeParse(field(data, "id"));
   if (!parsed.success) return INVALID;
-  return run("ማስታወቂያው ተወግዷል።", () => market.archiveListing(user, parsed.data));
+  return run("Listing removed.", () => market.archiveListing(user, parsed.data));
 }
 
 export async function createOfferAction(data: FormData): Promise<ActionResult> {
@@ -78,12 +93,12 @@ export async function createOfferAction(data: FormData): Promise<ActionResult> {
     .object({ listingId: id, amountEtb: money, note: z.string().trim().max(500).default("") })
     .safeParse({ listingId: field(data, "listingId"), amountEtb: field(data, "amountEtb"), note: field(data, "note") });
   if (!parsed.success) return INVALID;
-  return run("ቅናሽዎ ለሻጩ ተልኳል።", async () => {
+  return run("Your offer was sent to the seller.", async () => {
     await market.createOffer(user, parsed.data.listingId, parsed.data.amountEtb, parsed.data.note);
   });
 }
 
-function offerAction(message: string, work: (actor: market.Actor, offerId: string) => Promise<unknown>) {
+function offerAction(message: MessageKey, work: (actor: market.Actor, offerId: string) => Promise<unknown>) {
   return async (data: FormData): Promise<ActionResult> => {
     const user = await requireUser();
     const parsed = id.safeParse(field(data, "id"));
@@ -94,12 +109,12 @@ function offerAction(message: string, work: (actor: market.Actor, offerId: strin
   };
 }
 
-const withdrawOfferImpl = offerAction("ቅናሹ ተሰርዟል።", market.withdrawOffer);
-const rejectOfferImpl = offerAction("ቅናሹ ውድቅ ተደርጓል።", market.rejectOffer);
-const acceptOfferImpl = offerAction("ቅናሹ ተቀባይነት አግኝቷል፤ ትዕዛዝ ተከፍቷል።", market.acceptOffer);
-const markTransferredImpl = offerAction("አካውንቱ መተላለፉ ተመዝግቧል።", market.markTransferred);
-const confirmReceivedImpl = offerAction("ርክክቡን አረጋግጠዋል።", market.confirmReceived);
-const openDisputeImpl = offerAction("ክርክር ተከፍቷል፤ አስተዳዳሪው ይመለከተዋል።", market.openDispute);
+const withdrawOfferImpl = offerAction("Offer withdrawn.", market.withdrawOffer);
+const rejectOfferImpl = offerAction("Offer declined.", market.rejectOffer);
+const acceptOfferImpl = offerAction("Offer accepted. An order was opened.", market.acceptOffer);
+const markTransferredImpl = offerAction("Transfer recorded.", market.markTransferred);
+const confirmReceivedImpl = offerAction("Handover confirmed.", market.confirmReceived);
+const openDisputeImpl = offerAction("Dispute opened. An admin will review it.", market.openDispute);
 
 export async function withdrawOfferAction(data: FormData) {
   return withdrawOfferImpl(data);
@@ -128,10 +143,10 @@ export async function startConversationAction(data: FormData): Promise<ActionRes
   try {
     conversationId = (await market.startConversation(user, listingId.data)).id;
   } catch (error) {
-    if (error instanceof market.DomainError) return { ok: false, message: error.message };
+    if (error instanceof market.DomainError) return { ok: false, message: error.key };
     throw error;
   }
-  redirect(`/dashboard/messages/${conversationId}`);
+  redirect(localePath(await requestLocale(), `/dashboard/messages/${conversationId}`));
 }
 
 export async function sendMessageAction(data: FormData): Promise<ActionResult> {
@@ -140,7 +155,7 @@ export async function sendMessageAction(data: FormData): Promise<ActionResult> {
     .object({ conversationId: id, body: z.string().trim().min(1).max(2000) })
     .safeParse({ conversationId: field(data, "conversationId"), body: field(data, "body") });
   if (!parsed.success) return INVALID;
-  return run("ተልኳል።", () => market.sendMessage(user, parsed.data.conversationId, parsed.data.body));
+  return run("Sent.", () => market.sendMessage(user, parsed.data.conversationId, parsed.data.body));
 }
 
 export async function createReportAction(data: FormData): Promise<ActionResult> {
@@ -149,16 +164,16 @@ export async function createReportAction(data: FormData): Promise<ActionResult> 
     .object({ listingId: id, reason: inList(reportReasons) })
     .safeParse({ listingId: field(data, "listingId"), reason: field(data, "reason") });
   if (!parsed.success) return INVALID;
-  return run("ሪፖርቱ ደርሶናል።", () => market.createReport(user, parsed.data.listingId, parsed.data.reason));
+  return run("We received your report.", () => market.createReport(user, parsed.data.listingId, parsed.data.reason));
 }
 
 export async function createContactAction(data: FormData): Promise<ActionResult> {
-  if (data.get("website")) return { ok: true, message: "መልዕክትዎ ደርሶናል።" };
+  if (data.get("website")) return { ok: true, message: "We received your message." };
   const parsed = z
     .object({ name: z.string().trim().min(1).max(100), email: z.email().max(200), body: z.string().trim().min(1).max(2000) })
     .safeParse({ name: field(data, "name"), email: field(data, "email"), body: field(data, "body") });
   if (!parsed.success) return INVALID;
-  return run("መልዕክትዎ ደርሶናል።", async () => {
+  return run("We received your message.", async () => {
     await db.contactMessage.create({ data: parsed.data });
   });
 }
@@ -171,12 +186,12 @@ export async function updateProfileAction(data: FormData): Promise<ActionResult>
     .regex(/^[+0-9 ()-]{0,20}$/)
     .safeParse(field(data, "phone") ?? "");
   if (!parsed.success) return INVALID;
-  return run("ተቀምጧል።", () => market.updateProfile(user, parsed.data || null));
+  return run("Saved.", () => market.updateProfile(user, parsed.data || null));
 }
 
 // ---- አድሚን
 
-function adminAction(message: string, work: (actor: market.Actor, targetId: string) => Promise<unknown>) {
+function adminAction(message: MessageKey, work: (actor: market.Actor, targetId: string) => Promise<unknown>) {
   return async (data: FormData): Promise<ActionResult> => {
     const admin = await requireAdmin();
     const parsed = id.safeParse(field(data, "id"));
@@ -187,12 +202,12 @@ function adminAction(message: string, work: (actor: market.Actor, targetId: stri
   };
 }
 
-const approveListingImpl = adminAction("ማስታወቂያው ጸድቋል።", (actor, target) => market.reviewListing(actor, target, true));
-const confirmPaymentImpl = adminAction("ክፍያው ተረጋግጧል።", market.confirmPayment);
-const releaseOrderImpl = adminAction("ትዕዛዙ ተጠናቋል።", market.releaseOrder);
-const cancelOrderImpl = adminAction("ትዕዛዙ ተሰርዟል።", market.cancelOrder);
-const resolveReportImpl = adminAction("ተፈትቷል።", market.resolveReport);
-const resolveContactImpl = adminAction("ተፈትቷል።", market.resolveContactMessage);
+const approveListingImpl = adminAction("Listing approved.", (actor, target) => market.reviewListing(actor, target, true));
+const confirmPaymentImpl = adminAction("Payment confirmed.", market.confirmPayment);
+const releaseOrderImpl = adminAction("Order completed.", market.releaseOrder);
+const cancelOrderImpl = adminAction("Order cancelled.", market.cancelOrder);
+const resolveReportImpl = adminAction("Resolved.", market.resolveReport);
+const resolveContactImpl = adminAction("Resolved.", market.resolveContactMessage);
 
 export async function approveListingAction(data: FormData) {
   return approveListingImpl(data);
@@ -219,7 +234,7 @@ export async function rejectListingAction(data: FormData): Promise<ActionResult>
     .object({ id, reason: z.string().trim().max(300).default("") })
     .safeParse({ id: field(data, "id"), reason: field(data, "reason") });
   if (!parsed.success) return INVALID;
-  return run("ማስታወቂያው ውድቅ ተደርጓል።", () => market.reviewListing(admin, parsed.data.id, false, parsed.data.reason));
+  return run("Listing rejected.", () => market.reviewListing(admin, parsed.data.id, false, parsed.data.reason));
 }
 
 export async function setUserFlagAction(data: FormData): Promise<ActionResult> {
@@ -228,7 +243,7 @@ export async function setUserFlagAction(data: FormData): Promise<ActionResult> {
     .object({ id, flag: z.enum(["suspended", "verifiedSeller"]), value: z.enum(["true", "false"]) })
     .safeParse({ id: field(data, "id"), flag: field(data, "flag"), value: field(data, "value") });
   if (!parsed.success) return INVALID;
-  return run("ተቀይሯል።", () =>
+  return run("Updated.", () =>
     market.setUserFlags(admin, parsed.data.id, { [parsed.data.flag]: parsed.data.value === "true" })
   );
 }

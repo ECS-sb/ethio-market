@@ -7,7 +7,8 @@
 - ራዲየስ rounded-xl, ክፍተት p-6/gap-6, ፊደል Plus Jakarta Sans (ርዕስ), DM Sans (ጽሑፍ), Noto Sans Ethiopic (አማርኛ)
 - አዲስ ኮምፖነንት ከመስራት በፊት components/ui ውስጥ ፈልግ
 - ሳልፈቅድ ለይአውት አትቀይር
+- ጽሑፍ በኮድ ውስጥ አትጻፍ፤ በ lib/messages.ts አስገብተህ በ t() ተጠቀም
 
 ## መዋቅር
-app/ — ገጾች | components/ui/ — shadcn
+app/[lang]/ — ገጾች (እንግሊዝኛ ነባሪ፣ አማርኛ /am) | components/ui/ — shadcn
 components/ — የእኔ | lib/ — db, auth, session, queries, marketplace, actions, catalog, utils | prisma/ — schema

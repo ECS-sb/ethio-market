@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/i18n-provider";
 import {
   Select,
   SelectContent,
@@ -22,9 +23,12 @@ export function FieldSelect({
   options: Option[];
   placeholder?: string;
 }) {
+  const t = useT();
+  const items = options.map((option) => ({ value: option.value, label: t(option.label) }));
+
   return (
     <Select
-      items={options}
+      items={items}
       value={value || null}
       onValueChange={(next) => onChange(next == null ? "" : String(next))}
     >
@@ -32,7 +36,7 @@ export function FieldSelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {options.map((option) => (
+        {items.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
           </SelectItem>

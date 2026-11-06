@@ -1,11 +1,13 @@
 import { CheckIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { orderStages, orderStatusLabels, type OrderStatusValue } from "@/lib/catalog";
+import { getT } from "@/lib/i18n-server";
 import { cn } from "@/lib/utils";
 
-export function OrderProgress({ status }: { status: OrderStatusValue }) {
+export async function OrderProgress({ status }: { status: OrderStatusValue }) {
+  const t = await getT();
   if (status === "DISPUTED" || status === "CANCELLED") {
-    return <Badge variant={status === "DISPUTED" ? "destructive" : "secondary"}>{orderStatusLabels[status]}</Badge>;
+    return <Badge variant={status === "DISPUTED" ? "destructive" : "secondary"}>{t(orderStatusLabels[status])}</Badge>;
   }
   const current = orderStages.indexOf(status);
   return (
@@ -22,7 +24,7 @@ export function OrderProgress({ status }: { status: OrderStatusValue }) {
             >
               {reached ? <CheckIcon className="size-4" /> : index + 1}
             </span>
-            <span className={cn("text-xs", reached ? "text-foreground" : "text-muted-foreground")}>{orderStatusLabels[stage]}</span>
+            <span className={cn("text-xs", reached ? "text-foreground" : "text-muted-foreground")}>{t(orderStatusLabels[stage])}</span>
           </li>
         );
       })}
@@ -30,10 +32,11 @@ export function OrderProgress({ status }: { status: OrderStatusValue }) {
   );
 }
 
-export function PaymentNotice() {
+export async function PaymentNotice() {
+  const t = await getT();
   return (
     <p role="note" className="rounded-xl bg-primary/15 p-4 text-sm ring-1 ring-primary/30">
-      የመስመር ላይ ክፍያ ገና አልተገናኘም። ከአስተዳዳሪው መመሪያ ሳያገኙ ለማንም ገንዘብ አይላኩ።
+      {t("Online payment is not connected yet. Don't send money to anyone without instructions from an admin.")}
     </p>
   );
 }

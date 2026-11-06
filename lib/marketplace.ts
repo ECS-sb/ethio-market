@@ -1,13 +1,21 @@
 import { randomInt } from "node:crypto";
 import { db } from "@/lib/db";
 import type { OrderStatus } from "@/lib/generated/prisma/enums";
+import type { MessageKey } from "@/lib/messages";
 
 export type Actor = { id: string; isAdmin: boolean };
 
-export class DomainError extends Error {}
+export class DomainError extends Error {
+  constructor(readonly key: MessageKey) {
+    super(key);
+  }
+}
+
+// ዳታቤዙ ከአገልጋዩ ርቆ ወይም ከእንቅልፍ እየነቃ ሲሆን ነባሪው የ5 ሰከንድ ገደብ አይበቃም።
+const TX_OPTIONS = { maxWait: 10_000, timeout: 20_000 };
 
 function assertAdmin(actor: Actor) {
-  if (!actor.isAdmin) throw new DomainError("ይህን ለማድረግ ፈቃድ የለዎትም።");
+  if (!actor.isAdmin) throw new DomainError("You don't have permission to do this.");
 }
 
 function generateVerificationCode(): string {
@@ -27,10 +35,15 @@ export type ListingInput = {
   joinedYear?: number;
   originalEmail: boolean;
   special: boolean;
+  monetized?: boolean;
+  strikeFree?: boolean;
+  noAdsense?: boolean;
   description: string;
 };
 
-export async function createListing(actor: Actor, input: ListingInput) {
+export type ListingImageInput = { data: Uint8Array<ArrayBuffer>; thumb: Uint8Array<ArrayBuffer>; width: number; height: number };
+
+export async function createListing(actor: Actor, input: ListingInput, images: ListingImageInput[] = []) {
   const username = input.username.replace(/^@/, "").toLowerCase();
   const duplicate = await db.listing.findFirst({
     where: {
@@ -40,10 +53,16 @@ export async function createListing(actor: Actor, input: ListingInput) {
     },
     select: { id: true },
   });
-  if (duplicate) throw new DomainError("ይህ አካውንት አስቀድሞ በገበያው ላይ ገብቷል።");
+  if (duplicate) throw new DomainError("This account is already on the market.");
 
   return db.listing.create({
-    data: { ...input, username, sellerId: actor.id, verificationCode: generateVerificationCode() },
+    data: {
+      ...input,
+      username,
+      sellerId: actor.id,
+      verificationCode: generateVerificationCode(),
+      images: { create: images.map((image, position) => ({ ...image, position })) },
+    },
     select: { id: true, verificationCode: true },
   });
 }
@@ -53,7 +72,7 @@ export async function updateListingPrice(actor: Actor, listingId: string, priceE
     where: { id: listingId, sellerId: actor.id, status: { in: ["PENDING", "APPROVED"] } },
     data: { priceEtb },
   });
-  if (count !== 1) throw new DomainError("የዚህን ማስታወቂያ ዋጋ መቀየር አይቻልም።");
+  if (count !== 1) throw new DomainError("This listing's price can't be changed.");
 }
 
 export async function archiveListing(actor: Actor, listingId: string) {
@@ -62,9 +81,9 @@ export async function archiveListing(actor: Actor, listingId: string) {
       where: { id: listingId, sellerId: actor.id, status: { in: ["PENDING", "APPROVED", "REJECTED"] } },
       data: { status: "ARCHIVED" },
     });
-    if (count !== 1) throw new DomainError("ይህን ማስታወቂያ ማስወገድ አይቻልም።");
+    if (count !== 1) throw new DomainError("This listing can't be removed.");
     await tx.offer.updateMany({ where: { listingId, status: "PENDING" }, data: { status: "REJECTED" } });
-  });
+  }, TX_OPTIONS);
 }
 
 export async function reviewListing(actor: Actor, listingId: string, approve: boolean, reason?: string) {
@@ -73,18 +92,18 @@ export async function reviewListing(actor: Actor, listingId: string, approve: bo
     where: { id: listingId, status: "PENDING" },
     data: approve ? { status: "APPROVED", rejectReason: null } : { status: "REJECTED", rejectReason: reason || null },
   });
-  if (count !== 1) throw new DomainError("ይህ ማስታወቂያ አስቀድሞ ተገምግሟል።");
+  if (count !== 1) throw new DomainError("This listing has already been reviewed.");
 }
 
 export async function createOffer(actor: Actor, listingId: string, amountEtb: number, note: string) {
   const listing = await db.listing.findUnique({ where: { id: listingId }, select: { sellerId: true, status: true } });
-  if (!listing || listing.status !== "APPROVED") throw new DomainError("ይህ አካውንት አሁን ለሽያጭ ክፍት አይደለም።");
-  if (listing.sellerId === actor.id) throw new DomainError("ለራስዎ ማስታወቂያ ቅናሽ ማቅረብ አይችሉም።");
+  if (!listing || listing.status !== "APPROVED") throw new DomainError("This account isn't for sale right now.");
+  if (listing.sellerId === actor.id) throw new DomainError("You can't make an offer on your own listing.");
   const existing = await db.offer.findFirst({
     where: { listingId, buyerId: actor.id, status: "PENDING" },
     select: { id: true },
   });
-  if (existing) throw new DomainError("ለዚህ አካውንት መልስ የሚጠብቅ ቅናሽ አለዎት።");
+  if (existing) throw new DomainError("You already have an offer awaiting a reply on this account.");
   return db.offer.create({ data: { listingId, buyerId: actor.id, amountEtb, note }, select: { id: true } });
 }
 
@@ -93,7 +112,7 @@ export async function withdrawOffer(actor: Actor, offerId: string) {
     where: { id: offerId, buyerId: actor.id, status: "PENDING" },
     data: { status: "WITHDRAWN" },
   });
-  if (count !== 1) throw new DomainError("ይህን ቅናሽ መሰረዝ አይቻልም።");
+  if (count !== 1) throw new DomainError("This offer can't be withdrawn.");
 }
 
 export async function rejectOffer(actor: Actor, offerId: string) {
@@ -101,7 +120,7 @@ export async function rejectOffer(actor: Actor, offerId: string) {
     where: { id: offerId, status: "PENDING", listing: { sellerId: actor.id } },
     data: { status: "REJECTED" },
   });
-  if (count !== 1) throw new DomainError("ይህን ቅናሽ መመለስ አይቻልም።");
+  if (count !== 1) throw new DomainError("This offer can't be declined.");
 }
 
 export async function acceptOffer(actor: Actor, offerId: string) {
@@ -110,14 +129,14 @@ export async function acceptOffer(actor: Actor, offerId: string) {
       where: { id: offerId, status: "PENDING", listing: { sellerId: actor.id } },
       select: { id: true, listingId: true, buyerId: true, amountEtb: true },
     });
-    if (!offer) throw new DomainError("ይህን ቅናሽ መቀበል አይቻልም።");
+    if (!offer) throw new DomainError("This offer can't be accepted.");
 
     // አንድ ማስታወቂያ ለሁለት ገዢዎች እንዳይሸጥ የሁኔታ ለውጡ ራሱ ይጠብቃል።
     const { count } = await tx.listing.updateMany({
       where: { id: offer.listingId, status: "APPROVED", sellerId: actor.id },
       data: { status: "IN_PROGRESS" },
     });
-    if (count !== 1) throw new DomainError("ይህ አካውንት አሁን ለሽያጭ ክፍት አይደለም።");
+    if (count !== 1) throw new DomainError("This account isn't for sale right now.");
 
     await tx.offer.update({ where: { id: offer.id }, data: { status: "ACCEPTED" } });
     await tx.offer.updateMany({
@@ -134,12 +153,12 @@ export async function acceptOffer(actor: Actor, offerId: string) {
       },
       select: { id: true },
     });
-  });
+  }, TX_OPTIONS);
 }
 
 async function moveOrder(where: { id: string; buyerId?: string; sellerId?: string }, from: OrderStatus[], to: OrderStatus) {
   const { count } = await db.order.updateMany({ where: { ...where, status: { in: from } }, data: { status: to } });
-  if (count !== 1) throw new DomainError("ይህን ትዕዛዝ አሁን በዚህ መንገድ መቀየር አይቻልም።");
+  if (count !== 1) throw new DomainError("This order can't be changed this way right now.");
 }
 
 export async function confirmPayment(actor: Actor, orderId: string) {
@@ -164,7 +183,7 @@ export async function openDispute(actor: Actor, orderId: string) {
     },
     data: { status: "DISPUTED" },
   });
-  if (count !== 1) throw new DomainError("ለዚህ ትዕዛዝ ክርክር መክፈት አይቻልም።");
+  if (count !== 1) throw new DomainError("A dispute can't be opened for this order.");
 }
 
 export async function releaseOrder(actor: Actor, orderId: string) {
@@ -175,9 +194,9 @@ export async function releaseOrder(actor: Actor, orderId: string) {
       where: { id: orderId, status: { in: ["CONFIRMED", "DISPUTED"] } },
       data: { status: "RELEASED" },
     });
-    if (!order || count !== 1) throw new DomainError("ይህን ትዕዛዝ ማጠናቀቅ አይቻልም።");
+    if (!order || count !== 1) throw new DomainError("This order can't be completed.");
     await tx.listing.update({ where: { id: order.listingId }, data: { status: "SOLD" } });
-  });
+  }, TX_OPTIONS);
 }
 
 export async function cancelOrder(actor: Actor, orderId: string) {
@@ -188,17 +207,17 @@ export async function cancelOrder(actor: Actor, orderId: string) {
       where: { id: orderId, status: { in: ["AWAITING_PAYMENT", "PAID", "TRANSFERRED", "DISPUTED"] } },
       data: { status: "CANCELLED" },
     });
-    if (!order || count !== 1) throw new DomainError("ይህን ትዕዛዝ መሰረዝ አይቻልም።");
+    if (!order || count !== 1) throw new DomainError("This order can't be cancelled.");
     await tx.listing.update({ where: { id: order.listingId }, data: { status: "APPROVED" } });
-  });
+  }, TX_OPTIONS);
 }
 
 export async function startConversation(actor: Actor, listingId: string) {
   const listing = await db.listing.findUnique({ where: { id: listingId }, select: { sellerId: true, status: true } });
   if (!listing || !["APPROVED", "IN_PROGRESS"].includes(listing.status)) {
-    throw new DomainError("ይህ አካውንት አሁን አይገኝም።");
+    throw new DomainError("This account isn't available right now.");
   }
-  if (listing.sellerId === actor.id) throw new DomainError("ይህ የእርስዎ ማስታወቂያ ነው።");
+  if (listing.sellerId === actor.id) throw new DomainError("This is your listing.");
   return db.conversation.upsert({
     where: { listingId_buyerId: { listingId, buyerId: actor.id } },
     create: { listingId, buyerId: actor.id },
@@ -212,7 +231,7 @@ export async function sendMessage(actor: Actor, conversationId: string, body: st
     where: { id: conversationId, OR: [{ buyerId: actor.id }, { listing: { sellerId: actor.id } }] },
     select: { id: true },
   });
-  if (!conversation) throw new DomainError("ይህን ውይይት ማግኘት አልተቻለም።");
+  if (!conversation) throw new DomainError("This conversation couldn't be found.");
   await db.$transaction([
     db.message.create({ data: { conversationId, senderId: actor.id, body } }),
     db.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } }),
@@ -221,7 +240,7 @@ export async function sendMessage(actor: Actor, conversationId: string, body: st
 
 export async function createReport(actor: Actor, listingId: string, reason: string) {
   const listing = await db.listing.findUnique({ where: { id: listingId }, select: { id: true } });
-  if (!listing) throw new DomainError("ማስታወቂያው አልተገኘም።");
+  if (!listing) throw new DomainError("Listing not found.");
   await db.report.upsert({
     where: { listingId_reporterId: { listingId, reporterId: actor.id } },
     create: { listingId, reporterId: actor.id, reason },
@@ -241,11 +260,11 @@ export async function resolveContactMessage(actor: Actor, id: string) {
 
 export async function setUserFlags(actor: Actor, userId: string, flags: { suspended?: boolean; verifiedSeller?: boolean }) {
   assertAdmin(actor);
-  if (flags.suspended !== undefined && userId === actor.id) throw new DomainError("የራስዎን መለያ ማገድ አይችሉም።");
+  if (flags.suspended !== undefined && userId === actor.id) throw new DomainError("You can't suspend your own account.");
   await db.$transaction(async (tx) => {
     await tx.user.update({ where: { id: userId }, data: flags });
     if (flags.suspended) await tx.session.deleteMany({ where: { userId } });
-  });
+  }, TX_OPTIONS);
 }
 
 export async function updateProfile(actor: Actor, phone: string | null) {
