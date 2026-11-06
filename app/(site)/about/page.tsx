@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "ስለ እኛ" };
 
 const values = [
   { title: "ግልጽነት", description: "ገዢው ከመወሰኑ በፊት አስፈላጊውን መረጃ ማየት አለበት።" },
-  { title: "የተጠበቀ ክፍያ", description: "ርክክቡ እስኪረጋገጥ ገንዘቡ ለሻጩ አይለቀቅም።" },
+  { title: "ደረጃ በደረጃ ትዕዛዝ", description: "እያንዳንዱ ትዕዛዝ ከክፍያ ማረጋገጫ እስከ ርክክብ ድረስ ይከታተላል።" },
   { title: "ተጠያቂነት", description: "ሻጮች ባለቤትነታቸውን ያረጋግጣሉ፣ ታሪካቸውም ለገዢዎች ይታያል።" },
 ];
 

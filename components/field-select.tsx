@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Option } from "@/lib/data";
+import type { Option } from "@/lib/catalog";
 
 export function FieldSelect({
   id,

@@ -6,9 +6,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <GridBackdrop />
       <Brand />
       <main className="w-full max-w-md rounded-xl bg-card/70 p-6 ring-1 ring-foreground/10 backdrop-blur-sm">{children}</main>
-      <p className="max-w-md text-center text-xs text-muted-foreground">
-        መግቢያው ገና ከአገልጋይ ጋር አልተገናኘም፤ የሚያስገቡት መረጃ አይላክም፣ አይቀመጥም።
-      </p>
     </div>
   );
 }

@@ -10,4 +10,4 @@
 
 ## መዋቅር
 app/ — ገጾች | components/ui/ — shadcn
-components/ — የእኔ | lib/ — db, utils | prisma/ — schema
+components/ — የእኔ | lib/ — db, auth, session, queries, marketplace, actions, catalog, utils | prisma/ — schema

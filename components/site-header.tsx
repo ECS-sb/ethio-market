@@ -26,7 +26,7 @@ const links = [
   { href: "/faq", label: "ጥያቄዎች" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ authSlot }: { authSlot: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { ids } = useCompare();
 
@@ -57,12 +57,7 @@ export function SiteHeader() {
             አወዳድር
             {ids.length > 0 ? <Badge>{ids.length}</Badge> : null}
           </Link>
-          <Link href="/login" className={cn(buttonVariants({ variant: "ghost" }), "hidden sm:inline-flex")}>
-            ይግቡ
-          </Link>
-          <Link href="/register" className={cn(buttonVariants(), "hidden sm:inline-flex")}>
-            ይመዝገቡ
-          </Link>
+          {authSlot}
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger render={<Button variant="outline" size="icon" aria-label="ምናሌ ክፈት" className="size-10 lg:hidden" />}>
@@ -76,7 +71,7 @@ export function SiteHeader() {
                 <Form action="/accounts" role="search" className="pb-2" onSubmit={() => setOpen(false)}>
                   <Input name="q" aria-label="አካውንት ፈልግ" placeholder="አካውንት ፈልግ…" />
                 </Form>
-                {[...links, { href: "/compare", label: "አወዳድር" }, { href: "/login", label: "ይግቡ" }, { href: "/register", label: "ይመዝገቡ" }].map((link) => (
+                {[...links, { href: "/compare", label: "አወዳድር" }, { href: "/dashboard", label: "ዳሽቦርድ" }].map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}

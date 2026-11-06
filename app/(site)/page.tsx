@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
 import { ArrowRightIcon, ArrowUpRightIcon } from "lucide-react";
 import { Eyebrow, PlatformMark, SampleNotice } from "@/components/brand";
 import { GrowthChart } from "@/components/growth-chart";
@@ -6,42 +8,111 @@ import { HeroVisual } from "@/components/hero-visual";
 import { ListingCard } from "@/components/listing-card";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  activeListings,
   categories,
-  countByPlatform,
   followerRanges,
   formatCount,
-  getListing,
   howItWorksSteps,
+  illustrationGrowth,
   platforms,
   priceRanges,
-  sellers,
-} from "@/lib/data";
+} from "@/lib/catalog";
+import { getFeaturedListings, getPlatformCounts, getTopSellers } from "@/lib/queries";
 
 const pillars = [
   {
     number: "01.",
     title: "ባለቤትነት ይረጋገጣል",
-    description: "እያንዳንዱ ሻጭ አካውንቱ የራሱ መሆኑን በማረጋገጫ ኮድ ያሳያል።",
+    description: "እያንዳንዱ ማስታወቂያ በማረጋገጫ ኮድ እና በአስተዳዳሪ ግምገማ ያልፋል።",
   },
   {
     number: "02.",
-    title: "ክፍያው በEscrow ይጠበቃል",
-    description: "ገንዘቡ ርክክቡ እስኪረጋገጥ ድረስ ለሻጩ አይለቀቅም።",
+    title: "ትዕዛዝ ደረጃ በደረጃ",
+    description: "ከቅናሽ እስከ ርክክብ ያለው እያንዳንዱ ደረጃ ለገዢውም ለሻጩም ይታያል።",
     href: "/how-it-works",
   },
   {
     number: "03.",
     title: "መረጃ ከመግዛት በፊት",
-    description: "ዕድገትን፣ ተሳትፎን እና አድማጮችን አስቀድመው ይገምግሙ።",
+    description: "ተሳትፎን፣ አድማጮችን እና የሻጩን ታሪክ አስቀድመው ይገምግሙ።",
   },
 ];
 
-export default function HomePage() {
-  const featured = activeListings.filter((listing) => listing.status === "available").slice(0, 6);
-  const chartListing = getListing("1002");
+async function PlatformTiles() {
+  await connection();
+  const counts = await getPlatformCounts();
+  return (
+    <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-6">
+      {platforms.map((platform) => (
+        <Link
+          key={platform.id}
+          href={`/accounts?platform=${platform.id}`}
+          className="flex flex-col gap-4 rounded-xl bg-card/70 p-6 ring-1 ring-foreground/10 transition-all hover:-translate-y-1 hover:ring-primary/60"
+        >
+          <PlatformMark mark={platform.mark} />
+          <div>
+            <p className="font-semibold">{platform.name}</p>
+            <p className="text-sm text-muted-foreground">{counts[platform.id] ?? 0} አካውንቶች</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
 
+async function Featured() {
+  await connection();
+  const featured = await getFeaturedListings();
+  if (featured.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-xl bg-card/70 p-12 text-center ring-1 ring-foreground/10">
+        <p className="font-semibold">ገና ማስታወቂያ አልወጣም</p>
+        <p className="text-sm text-muted-foreground">የመጀመሪያው ሻጭ ይሁኑ።</p>
+        <Link href="/sell" className={buttonVariants()}>
+          አካውንት ይሽጡ
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {featured.map((listing) => (
+        <ListingCard key={listing.id} listing={listing} />
+      ))}
+    </div>
+  );
+}
+
+async function TopSellers() {
+  await connection();
+  const sellers = await getTopSellers(3);
+  if (sellers.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-6 pt-24">
+      <div className="flex flex-wrap items-end justify-between gap-6">
+        <h2 className="text-4xl font-semibold">ምርጥ ሻጮች</h2>
+        <Link href="/sellers" className={buttonVariants({ variant: "outline" })}>
+          ሁሉንም ሻጮች
+        </Link>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-3">
+        {sellers.map((seller) => (
+          <Link
+            key={seller.id}
+            href={`/accounts?seller=${seller.id}`}
+            className="flex flex-col gap-2 rounded-xl bg-card/70 p-6 ring-1 ring-foreground/10 transition-all hover:ring-primary/60"
+          >
+            <p className="font-semibold">{seller.name}</p>
+            <p className="text-sm text-muted-foreground">{seller.deals} ሽያጮች</p>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function HomePage() {
   return (
     <>
       <section className="grid items-center gap-6 pt-12 lg:grid-cols-2 lg:pt-20">
@@ -74,7 +145,7 @@ export default function HomePage() {
               <ArrowUpRightIcon className="size-7" />
             </Link>
             <p className="max-w-sm text-sm text-muted-foreground">
-              ከInstagram እስከ Telegram ያሉ አካውንቶችን ያስሱ፣ ያወዳድሩ እና በEscrow ሂደት ይግዙ።
+              ከInstagram እስከ Telegram ያሉ አካውንቶችን ያስሱ፣ ያወዳድሩ እና ደረጃ በደረጃ በሚታይ ሂደት ይግዙ።
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -93,21 +164,9 @@ export default function HomePage() {
         <h2 id="platforms-heading" className="sr-only">
           መድረኮች
         </h2>
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-6">
-          {platforms.map((platform) => (
-            <Link
-              key={platform.id}
-              href={`/accounts?platform=${platform.id}`}
-              className="flex flex-col gap-4 rounded-xl bg-card/70 p-6 ring-1 ring-foreground/10 transition-all hover:-translate-y-1 hover:ring-primary/60"
-            >
-              <PlatformMark mark={platform.mark} />
-              <div>
-                <p className="font-semibold">{platform.name}</p>
-                <p className="text-sm text-muted-foreground">{countByPlatform(platform.id)} ናሙና</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <Suspense fallback={<Skeleton className="h-36 rounded-xl" />}>
+          <PlatformTiles />
+        </Suspense>
       </section>
 
       <section className="flex flex-col gap-12 pt-24">
@@ -118,7 +177,7 @@ export default function HomePage() {
             ግልጽ የሆነ ሂደት።
           </h2>
           <p className="max-w-lg text-muted-foreground lg:justify-self-end">
-            ማስታወቂያ ከመውጣቱ እስከ ክፍያ መለቀቅ ድረስ እያንዳንዱ ደረጃ ለሁለቱም ወገኖች ግልጽ እንዲሆን የተዘጋጀ ነው።
+            ማስታወቂያ ከመውጣቱ እስከ ትዕዛዝ መጠናቀቅ ድረስ እያንዳንዱ ደረጃ ለሁለቱም ወገኖች ግልጽ እንዲሆን የተዘጋጀ ነው።
           </p>
         </div>
         <div className="grid items-center gap-6 md:grid-cols-3 md:gap-0">
@@ -151,19 +210,24 @@ export default function HomePage() {
       <section className="flex flex-col gap-6 pt-24">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <h2 className="text-4xl font-semibold">
-            <span className="text-gold">የሚመከሩ</span> አካውንቶች
+            <span className="text-gold">አዳዲስ</span> አካውንቶች
           </h2>
           <Link href="/accounts" className={buttonVariants({ variant: "outline" })}>
             ሁሉንም ይመልከቱ
             <ArrowRightIcon data-icon="inline-end" />
           </Link>
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {featured.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
-          ))}
-        </div>
-        <SampleNotice />
+        <Suspense
+          fallback={
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, index) => (
+                <Skeleton key={index} className="h-80 rounded-xl" />
+              ))}
+            </div>
+          }
+        >
+          <Featured />
+        </Suspense>
       </section>
 
       <section className="flex flex-col gap-6 pt-24">
@@ -190,13 +254,14 @@ export default function HomePage() {
         <div className="relative flex flex-col gap-6">
           <Card className="bg-card/70 [--card-spacing:--spacing(6)]">
             <CardHeader>
-              <CardDescription>የተከታዮች ዕድገት (ናሙና)</CardDescription>
-              <CardTitle className="text-2xl font-semibold">
-                {chartListing ? formatCount(chartListing.followers) : ""}
-              </CardTitle>
+              <CardDescription>የተከታዮች ዕድገት</CardDescription>
+              <CardTitle className="text-2xl font-semibold">{formatCount(illustrationGrowth[illustrationGrowth.length - 1])}</CardTitle>
             </CardHeader>
-            <div className="px-6">{chartListing ? <GrowthChart values={chartListing.growth} /> : null}</div>
+            <div className="px-6">
+              <GrowthChart values={illustrationGrowth} />
+            </div>
           </Card>
+          <SampleNotice />
         </div>
         <div className="flex flex-col items-start gap-6">
           <h2 className="text-4xl leading-tight font-semibold">
@@ -205,7 +270,7 @@ export default function HomePage() {
             <span className="text-gold">ቁጥሮቹን</span> ይመልከቱ።
           </h2>
           <p className="text-muted-foreground">
-            እያንዳንዱ ማስታወቂያ የዕድገት ግራፍ፣ የተሳትፎ መጠን፣ የአድማጮች ስብጥር እና የሻጩን ታሪክ ያሳያል። አካውንቶችን ጎን ለጎን ማወዳደርም ይችላሉ።
+            እያንዳንዱ ማስታወቂያ ተከታዮችን፣ ተሳትፎን፣ የአድማጮችን ስብጥር እና የሻጩን ታሪክ ያሳያል። አካውንቶችን ጎን ለጎን ማወዳደርም ይችላሉ።
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href="/compare" className={buttonVariants({ size: "lg" })}>
@@ -234,30 +299,9 @@ export default function HomePage() {
         </ol>
       </section>
 
-      <section className="flex flex-col gap-6 pt-24">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <h2 className="text-4xl font-semibold">
-            ምርጥ ሻጮች
-          </h2>
-          <Link href="/sellers" className={buttonVariants({ variant: "outline" })}>
-            ሁሉንም ሻጮች
-          </Link>
-        </div>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {sellers.slice(0, 3).map((seller) => (
-            <Link
-              key={seller.id}
-              href={`/accounts?seller=${seller.id}`}
-              className="flex flex-col gap-2 rounded-xl bg-card/70 p-6 ring-1 ring-foreground/10 transition-all hover:ring-primary/60"
-            >
-              <p className="font-semibold">{seller.name}</p>
-              <p className="text-sm text-muted-foreground">
-                ★ {seller.rating} · {seller.deals} ሽያጮች
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <Suspense fallback={null}>
+        <TopSellers />
+      </Suspense>
 
       <section className="pt-24">
         <div className="flex flex-col items-start justify-between gap-6 rounded-xl bg-primary p-6 text-primary-foreground sm:flex-row sm:items-center sm:p-12">

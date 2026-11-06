@@ -1,40 +1,49 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { XIcon } from "lucide-react";
 import { useCompare } from "@/components/compare-store";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  categories,
-  countries,
-  formatCount,
-  formatPrice,
-  getListing,
-  getPlatform,
-  getSeller,
-  labelOf,
-  type Listing,
-} from "@/lib/data";
+import { categories, countries, formatCount, formatPrice, getPlatform, labelOf, listingStatusLabels } from "@/lib/catalog";
+import type { PublicListing } from "@/lib/queries";
 
-const rows: { label: string; value: (listing: Listing) => string }[] = [
+const rows: { label: string; value: (listing: PublicListing) => string }[] = [
   { label: "መድረክ", value: (listing) => getPlatform(listing.platform)?.name ?? "" },
-  { label: "ዋጋ", value: (listing) => formatPrice(listing.price) },
+  { label: "ዋጋ", value: (listing) => formatPrice(listing.priceEtb) },
   { label: "ተከታዮች", value: (listing) => formatCount(listing.followers) },
-  { label: "ተሳትፎ", value: (listing) => `${listing.engagement}%` },
-  { label: "ልጥፎች", value: (listing) => formatCount(listing.posts) },
+  { label: "ተሳትፎ", value: (listing) => (listing.engagement === null ? "—" : `${listing.engagement}%`) },
+  { label: "ልጥፎች", value: (listing) => (listing.posts === null ? "—" : formatCount(listing.posts)) },
   { label: "ዘርፍ", value: (listing) => labelOf(categories, listing.category) },
   { label: "ዋና ሀገር", value: (listing) => labelOf(countries, listing.country) },
-  { label: "የተከፈተበት ዓመት", value: (listing) => String(listing.joinedYear) },
+  { label: "የተከፈተበት ዓመት", value: (listing) => (listing.joinedYear === null ? "—" : String(listing.joinedYear)) },
   { label: "የመጀመሪያ ኢሜይል", value: (listing) => (listing.originalEmail ? "ይካተታል" : "አይካተትም") },
-  { label: "ሻጭ", value: (listing) => getSeller(listing.sellerId)?.name ?? "" },
+  { label: "ሁኔታ", value: (listing) => listingStatusLabels[listing.status] },
+  { label: "ሻጭ", value: (listing) => listing.sellerName },
 ];
 
 export function CompareTable() {
   const { ids, toggle, clear } = useCompare();
-  const items = ids.map(getListing).filter((listing): listing is Listing => Boolean(listing));
+  const key = ids.join(",");
+  const [loaded, setLoaded] = useState<{ key: string; items: PublicListing[] } | null>(null);
 
-  if (items.length === 0) {
+  useEffect(() => {
+    if (!key) return;
+    let active = true;
+    fetch(`/api/listings?ids=${encodeURIComponent(key)}`)
+      .then((response) => (response.ok ? response.json() : []))
+      .catch(() => [])
+      .then((items: PublicListing[]) => {
+        if (active) setLoaded({ key, items });
+      });
+    return () => {
+      active = false;
+    };
+  }, [key]);
+
+  if (ids.length === 0) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-xl bg-card/70 p-12 text-center ring-1 ring-foreground/10">
         <p className="font-semibold">ለማወዳደር ገና አካውንት አልመረጡም</p>
@@ -45,6 +54,9 @@ export function CompareTable() {
       </div>
     );
   }
+
+  if (!loaded || loaded.key !== key) return <Skeleton className="h-96 rounded-xl" />;
+  const items = ids.flatMap((id) => loaded.items.filter((item) => item.id === id));
 
   return (
     <div className="flex flex-col gap-6">

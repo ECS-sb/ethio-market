@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageIntro } from "@/components/brand";
 import { buttonVariants } from "@/components/ui/button";
-import { escrowStages, howItWorksSteps } from "@/lib/data";
+import { howItWorksSteps, orderStages, orderStatusLabels } from "@/lib/catalog";
 
 export const metadata: Metadata = { title: "እንዴት ይሰራል" };
 
@@ -29,15 +29,15 @@ export default function HowItWorksPage() {
       </ol>
       <section className="flex flex-col gap-6 pt-12">
         <h2 className="text-3xl font-semibold">
-          የ<span className="text-gold">Escrow</span> ደረጃዎች
+          የ<span className="text-gold">ትዕዛዝ</span> ደረጃዎች
         </h2>
         <ol className="flex flex-col gap-4 md:flex-row">
-          {escrowStages.map((stage, index) => (
+          {orderStages.map((stage, index) => (
             <li key={stage} className="flex flex-1 items-center gap-4 rounded-xl bg-card/70 p-6 ring-1 ring-foreground/10">
               <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                 {index + 1}
               </span>
-              <span className="text-sm">{stage}</span>
+              <span className="text-sm">{orderStatusLabels[stage]}</span>
             </li>
           ))}
         </ol>

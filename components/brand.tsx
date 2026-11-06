@@ -40,7 +40,7 @@ export function GridBackdrop() {
 export function SampleNotice({ className }: { className?: string }) {
   return (
     <p className={cn("text-xs text-muted-foreground", className)}>
-      እዚህ ያለው መረጃ ለማሳያ የተዘጋጀ ናሙና ነው፤ እውነተኛ አካውንት ወይም ሻጭ አይወክልም።
+      ይህ ምስል ለምሳሌ የቀረበ ነው፤ እውነተኛ አካውንትን አይወክልም።
     </p>
   );
 }

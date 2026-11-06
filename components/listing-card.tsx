@@ -5,22 +5,12 @@ import { CompareToggle } from "@/components/compare-toggle";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  categories,
-  countries,
-  formatCount,
-  formatPrice,
-  getPlatform,
-  getSeller,
-  labelOf,
-  statusLabels,
-  type Listing,
-} from "@/lib/data";
+import { categories, countries, formatCount, formatPrice, getPlatform, labelOf, listingStatusLabels } from "@/lib/catalog";
+import type { PublicListing } from "@/lib/queries";
 
-export function ListingCard({ listing }: { listing: Listing }) {
+export function ListingCard({ listing }: { listing: PublicListing }) {
   const platform = getPlatform(listing.platform);
-  const seller = getSeller(listing.sellerId);
-  const sold = listing.status === "sold";
+  const sold = listing.status === "SOLD";
 
   return (
     <Card className="bg-card/70 backdrop-blur-sm transition-all hover:-translate-y-1 hover:ring-primary/60 [--card-spacing:--spacing(6)]">
@@ -35,9 +25,9 @@ export function ListingCard({ listing }: { listing: Listing }) {
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-6">
         <div className="flex flex-wrap gap-2">
-          {listing.status !== "available" ? <Badge variant="outline">{statusLabels[listing.status]}</Badge> : null}
+          {listing.status !== "APPROVED" ? <Badge variant="outline">{listingStatusLabels[listing.status]}</Badge> : null}
           {listing.special ? <Badge>ልዩ ስም</Badge> : null}
-          {seller?.verified ? (
+          {listing.sellerVerified ? (
             <Badge variant="secondary">
               <BadgeCheckIcon data-icon="inline-start" />
               የተረጋገጠ ሻጭ
@@ -46,12 +36,12 @@ export function ListingCard({ listing }: { listing: Listing }) {
         </div>
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div className="flex flex-col gap-1">
-            <dt className="text-xs text-muted-foreground">{platform?.unit}</dt>
+            <dt className="text-xs text-muted-foreground">{platform?.unit ?? "ተከታዮች"}</dt>
             <dd className="font-semibold">{formatCount(listing.followers)}</dd>
           </div>
           <div className="flex flex-col gap-1">
             <dt className="text-xs text-muted-foreground">ተሳትፎ</dt>
-            <dd className="font-semibold">{listing.engagement}%</dd>
+            <dd className="font-semibold">{listing.engagement === null ? "—" : `${listing.engagement}%`}</dd>
           </div>
           <div className="flex flex-col gap-1">
             <dt className="text-xs text-muted-foreground">ዘርፍ</dt>
@@ -62,7 +52,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
             <dd>{labelOf(countries, listing.country)}</dd>
           </div>
         </dl>
-        <p className="mt-auto text-2xl font-semibold text-primary">{formatPrice(listing.price)}</p>
+        <p className="mt-auto text-2xl font-semibold text-primary">{formatPrice(listing.priceEtb)}</p>
       </CardContent>
       <CardFooter className="gap-2 border-border bg-transparent">
         <Link

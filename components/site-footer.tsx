@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Brand, SampleNotice } from "@/components/brand";
-import { platforms } from "@/lib/data";
+import { Brand } from "@/components/brand";
+import { platforms } from "@/lib/catalog";
 
 const groups = [
   {
@@ -67,7 +67,7 @@ export function SiteFooter() {
         ))}
       </div>
       <div className="mx-auto w-full max-w-7xl border-t border-border px-6 py-6">
-        <SampleNotice />
+        <p className="text-xs text-muted-foreground">© Ethio Market</p>
       </div>
     </footer>
   );

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PageIntro } from "@/components/brand";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { faqs } from "@/lib/data";
+import { faqs } from "@/lib/catalog";
 
 export const metadata: Metadata = { title: "ተደጋጋሚ ጥያቄዎች" };
 

@@ -1,4 +1,4 @@
-import { formatCount, growthLabels } from "@/lib/data";
+import { formatCount, growthLabels } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 
 const WIDTH = 640;

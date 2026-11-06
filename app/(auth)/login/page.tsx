@@ -1,41 +1,55 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DemoForm } from "@/components/demo-form";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { redirect } from "next/navigation";
+import { GoogleSignIn } from "@/components/google-sign-in";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentUser, safeNextPath } from "@/lib/session";
 
 export const metadata: Metadata = { title: "ይግቡ" };
 
-export default function LoginPage() {
+type Params = Promise<Record<string, string | string[] | undefined>>;
+
+async function LoginContent({ searchParams }: { searchParams: Params }) {
+  const params = await searchParams;
+  const next = safeNextPath(typeof params.next === "string" ? params.next : null);
+  const suspended = params.error === "suspended";
+  const user = await getCurrentUser();
+  if (user && !user.suspended && !suspended) redirect(next);
+
   return (
-    <DemoForm message="መግቢያው ገና አልተገናኘም። ዳሽቦርዱን በናሙና መረጃ ማየት ይችላሉ።" className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">እንኳን ደህና መጡ</h1>
+    <div className="flex flex-col gap-6">
+      {suspended || user?.suspended ? (
+        <p role="alert" className="rounded-xl bg-destructive/10 p-4 text-sm text-destructive">
+          ይህ መለያ ታግዷል። ለበለጠ መረጃ ያግኙን።
+        </p>
+      ) : null}
+      <GoogleSignIn next={next} />
+    </div>
+  );
+}
+
+export default function LoginPage({ searchParams }: { searchParams: Params }) {
+  return (
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">ኢሜይል</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" dir="ltr" />
+        <h1 className="text-2xl font-semibold">እንኳን ደህና መጡ</h1>
+        <p className="text-sm text-muted-foreground">በGmail መለያዎ ይግቡ ወይም ይመዝገቡ።</p>
       </div>
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="password">የይለፍ ቃል</Label>
-          <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground">
-            ረስተዋል?
-          </Link>
-        </div>
-        <Input id="password" name="password" type="password" required autoComplete="current-password" dir="ltr" />
-      </div>
-      <Button type="submit" size="lg">
-        ይግቡ
-      </Button>
-      <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "lg" })}>
-        ዳሽቦርዱን በናሙና ይመልከቱ
-      </Link>
-      <p className="text-center text-sm text-muted-foreground">
-        መለያ የለዎትም?{" "}
-        <Link href="/register" className="font-medium text-foreground hover:underline">
-          ይመዝገቡ
-        </Link>
+      <Suspense fallback={<Skeleton className="h-12 rounded-xl" />}>
+        <LoginContent searchParams={searchParams} />
+      </Suspense>
+      <p className="text-center text-xs text-muted-foreground">
+        በመቀጠልዎ{" "}
+        <Link href="/terms" className="underline hover:text-foreground">
+          የአገልግሎት ውሉን
+        </Link>{" "}
+        እና{" "}
+        <Link href="/privacy" className="underline hover:text-foreground">
+          የግላዊነት ፖሊሲውን
+        </Link>{" "}
+        ተቀብለዋል።
       </p>
-    </DemoForm>
+    </div>
   );
 }

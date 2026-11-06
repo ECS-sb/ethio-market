@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  IN_PROGRESS
+  SOLD
+  ARCHIVED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT
+  PAID
+  TRANSFERRED
+  CONFIRMED
+  RELEASED
+  DISPUTED
+  CANCELLED
+}
+
+model User {
+  id             String   @id
+  name           String
+  email          String   @unique
+  emailVerified  Boolean  @default(false)
+  image          String?
+  phone          String?
+  suspended      Boolean  @default(false)
+  verifiedSeller Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sessions          Session[]
+  accounts          Account[]
+  listings          Listing[]
+  offers            Offer[]
+  purchases         Order[]        @relation("OrderBuyer")
+  sales             Order[]        @relation("OrderSeller")
+  buyerConversations Conversation[] @relation("ConversationBuyer")
+  messages          Message[]
+  reports           Report[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Listing {
+  id               String        @id @default(cuid())
+  sellerId         String
+  seller           User          @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  platform         String
+  username         String
+  followers        Int
+  posts            Int?
+  priceEtb         Int
+  category         String
+  country          String
+  femaleShare      Int?
+  engagement       Float?
+  joinedYear       Int?
+  originalEmail    Boolean       @default(false)
+  special          Boolean       @default(false)
+  description      String        @default("")
+  verificationCode String
+  status           ListingStatus @default(PENDING)
+  rejectReason     String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  offers        Offer[]
+  orders        Order[]
+  conversations Conversation[]
+  reports       Report[]
+
+  @@index([status, createdAt])
+  @@index([sellerId])
+  @@index([platform, username])
+  @@map("listing")
+}
+
+model Offer {
+  id        String      @id @default(cuid())
+  listingId String
+  listing   Listing     @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId   String
+  buyer     User        @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+  amountEtb Int
+  note      String      @default("")
+  status    OfferStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  order Order?
+
+  @@index([listingId, status])
+  @@index([buyerId])
+  @@map("offer")
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  listingId String
+  listing   Listing     @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  offerId   String      @unique
+  offer     Offer       @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  buyerId   String
+  buyer     User        @relation("OrderBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  sellerId  String
+  seller    User        @relation("OrderSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  amountEtb Int
+  status    OrderStatus @default(AWAITING_PAYMENT)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+  @@map("order")
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyerId   String
+  buyer     User     @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+
+  @@unique([listingId, buyerId])
+  @@index([buyerId])
+  @@map("conversation")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  body           String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("message")
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reporterId String
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Restrict)
+  reason     String
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@unique([listingId, reporterId])
+  @@index([resolved])
+  @@map("report")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  body      String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([resolved])
+  @@map("contact_message")
+}
