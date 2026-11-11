@@ -90,10 +90,10 @@ export const reportReasons: Option[] = [
 
 export const listingStatusLabels: Record<ListingStatusValue, MessageKey> = {
   PENDING: "In review",
-  APPROVED: "For sale",
+  APPROVED: "Available",
   REJECTED: "Rejected",
   IN_PROGRESS: "In progress",
-  SOLD: "Sold",
+  SOLD: "Sold out",
   ARCHIVED: "Removed",
 };
 

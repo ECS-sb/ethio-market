@@ -1,9 +1,10 @@
+import { CheckIcon } from "lucide-react";
 import { ActionButton, ActionForm, SubmitButton } from "@/components/action-form";
 import { LocaleLink } from "@/components/i18n-provider";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { archiveListingAction, updatePriceAction } from "@/lib/actions";
+import { archiveListingAction, setAvailabilityAction, updatePriceAction } from "@/lib/actions";
 import { formatCount, getPlatform, listingStatusLabels } from "@/lib/catalog";
 import { getT, pageTitle } from "@/lib/i18n-server";
 import { getSellerListings } from "@/lib/queries";
@@ -53,6 +54,13 @@ export default async function SellerListingsPage() {
               ) : null}
 
               <div className="flex flex-wrap items-center gap-2">
+                {listing.status === "APPROVED" || (listing.status === "SOLD" && listing._count.orders === 0) ? (
+                  <AvailabilityToggle
+                    id={listing.id}
+                    available={listing.status === "APPROVED"}
+                    labels={{ group: t("Availability"), available: t("Available"), soldOut: t("Sold out") }}
+                  />
+                ) : null}
                 {listing.status === "PENDING" || listing.status === "APPROVED" ? (
                   <ActionForm action={updatePriceAction} className="flex items-center gap-2">
                     <input type="hidden" name="id" value={listing.id} />
@@ -80,5 +88,44 @@ export default async function SellerListingsPage() {
         </ul>
       )}
     </>
+  );
+}
+
+/** አሁን ያለው ሁኔታ ደምቆ ይታያል፤ ሌላኛውን መጫን ሁኔታውን ይቀይራል። */
+function AvailabilityToggle({
+  id,
+  available,
+  labels,
+}: {
+  id: string;
+  available: boolean;
+  labels: { group: string; available: string; soldOut: string };
+}) {
+  const options = [
+    { value: true, text: labels.available },
+    { value: false, text: labels.soldOut },
+  ];
+  return (
+    <div role="group" aria-label={labels.group} className="flex items-center gap-1 rounded-xl p-1 ring-1 ring-foreground/10">
+      {options.map((option) =>
+        option.value === available ? (
+          <span key={option.text} aria-current="true" className={buttonVariants({ size: "sm" })}>
+            <CheckIcon data-icon="inline-start" />
+            {option.text}
+          </span>
+        ) : (
+          <ActionButton
+            key={option.text}
+            action={setAvailabilityAction}
+            id={id}
+            fields={{ available: String(option.value) }}
+            variant="ghost"
+            size="sm"
+          >
+            {option.text}
+          </ActionButton>
+        )
+      )}
+    </div>
   );
 }

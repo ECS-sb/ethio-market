@@ -27,7 +27,7 @@ export async function ListingCard({ listing }: { listing: PublicListing }) {
             width={cover.width}
             height={cover.height}
             loading="lazy"
-            className="aspect-video w-full rounded-xl bg-secondary object-cover object-top"
+            className={`aspect-video w-full rounded-xl bg-secondary object-cover object-top ${sold ? "opacity-60 grayscale" : ""}`}
           />
         </div>
       ) : null}
@@ -42,7 +42,7 @@ export async function ListingCard({ listing }: { listing: PublicListing }) {
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-6">
         <div className="flex flex-wrap gap-2">
-          {listing.status !== "APPROVED" ? <Badge variant="outline">{t(listingStatusLabels[listing.status])}</Badge> : null}
+          <Badge variant={sold ? "secondary" : "outline"}>{t(listingStatusLabels[listing.status])}</Badge>
           {listing.special ? <Badge>{t("Special name")}</Badge> : null}
           {listing.monetized ? <Badge>{t("Monetized")}</Badge> : null}
           {listing.sellerVerified ? (
@@ -70,7 +70,7 @@ export async function ListingCard({ listing }: { listing: PublicListing }) {
             <dd>{t(labelOf(countries, listing.country))}</dd>
           </div>
         </dl>
-        <p className="mt-auto text-2xl font-semibold text-primary">{formatPrice(t, listing.priceEtb)}</p>
+        <p className={`mt-auto text-2xl font-semibold ${sold ? "text-muted-foreground" : "text-primary"}`}>{formatPrice(t, listing.priceEtb)}</p>
       </CardContent>
       <CardFooter className="gap-2 border-border bg-transparent">
         <LocaleLink

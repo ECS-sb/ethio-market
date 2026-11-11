@@ -89,7 +89,7 @@ export async function searchListings(filters: ListingFilters) {
   const page = Math.max(1, filters.page ?? 1);
   const q = filters.q?.trim();
   const where: Prisma.ListingWhereInput = {
-    status: "APPROVED",
+    status: { in: ["APPROVED", "SOLD"] },
     platform: filters.platform || undefined,
     category: filters.category || undefined,
     country: filters.country || undefined,
@@ -110,7 +110,14 @@ export async function searchListings(filters: ListingFilters) {
       : {}),
   };
   const [rows, total] = await Promise.all([
-    db.listing.findMany({ where, select: publicSelect, orderBy: orderFor(filters.sort), skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    // የenum ቅደም ተከተሉ APPROVED ከSOLD ይቀድማል፤ የሚገኙት መጀመሪያ፣ የተሸጡት ከኋላ ይታያሉ።
+    db.listing.findMany({
+      where,
+      select: publicSelect,
+      orderBy: [{ status: "asc" }, orderFor(filters.sort)],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
     db.listing.count({ where }),
   ]);
   return { items: rows.map(toPublic), total, page, pages: Math.max(1, Math.ceil(total / PAGE_SIZE)) };
@@ -277,7 +284,7 @@ export async function getSellerListings(userId: string) {
       status: true,
       verificationCode: true,
       rejectReason: true,
-      _count: { select: { offers: { where: { status: "PENDING" } } } },
+      _count: { select: { offers: { where: { status: "PENDING" } }, orders: { where: { status: "RELEASED" } } } },
     },
   });
 }

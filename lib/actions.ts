@@ -87,6 +87,18 @@ export async function archiveListingAction(data: FormData): Promise<ActionResult
   return run("Listing removed.", () => market.archiveListing(user, parsed.data));
 }
 
+export async function setAvailabilityAction(data: FormData): Promise<ActionResult> {
+  const user = await requireUser();
+  const parsed = z
+    .object({ id, available: z.enum(["true", "false"]) })
+    .safeParse({ id: field(data, "id"), available: field(data, "available") });
+  if (!parsed.success) return INVALID;
+  const available = parsed.data.available === "true";
+  return run(available ? "Marked as available." : "Marked as sold out.", () =>
+    market.setListingAvailability(user, parsed.data.id, available)
+  );
+}
+
 export async function createOfferAction(data: FormData): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = z

@@ -86,6 +86,38 @@ export async function archiveListing(actor: Actor, listingId: string) {
   }, TX_OPTIONS);
 }
 
+/** ሻጩ አካውንቱን ከገበያው ውጭ ሲሸጥ "Sold out" ያደርገዋል፤ በስህተት ከሆነ መልሶ "Available" ያደርገዋል። */
+export async function setListingAvailability(actor: Actor, listingId: string, available: boolean) {
+  await db.$transaction(async (tx) => {
+    if (!available) {
+      const { count } = await tx.listing.updateMany({
+        where: { id: listingId, sellerId: actor.id, status: "APPROVED" },
+        data: { status: "SOLD" },
+      });
+      if (count !== 1) throw new DomainError("This listing's availability can't be changed.");
+      await tx.offer.updateMany({ where: { listingId, status: "PENDING" }, data: { status: "REJECTED" } });
+      return;
+    }
+
+    // በገበያው ትዕዛዝ ተጠናቆ የተሸጠ ማስታወቂያ ተመልሶ ሊከፈት አይችልም።
+    const listing = await tx.listing.findFirst({
+      where: { id: listingId, sellerId: actor.id, status: "SOLD", orders: { none: { status: "RELEASED" } } },
+      select: { platform: true, username: true },
+    });
+    if (!listing) throw new DomainError("This listing's availability can't be changed.");
+    const duplicate = await tx.listing.findFirst({
+      where: { id: { not: listingId }, ...listing, status: { in: ["PENDING", "APPROVED", "IN_PROGRESS"] } },
+      select: { id: true },
+    });
+    if (duplicate) throw new DomainError("This account is already on the market.");
+    const { count } = await tx.listing.updateMany({
+      where: { id: listingId, sellerId: actor.id, status: "SOLD" },
+      data: { status: "APPROVED" },
+    });
+    if (count !== 1) throw new DomainError("This listing's availability can't be changed.");
+  }, TX_OPTIONS);
+}
+
 export async function reviewListing(actor: Actor, listingId: string, approve: boolean, reason?: string) {
   assertAdmin(actor);
   const { count } = await db.listing.updateMany({
