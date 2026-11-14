@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { aiEnabled, AI_MODEL } from "@/lib/telegram/ai";
 import { countPending } from "@/lib/telegram/analyze";
-import { replyStats, startOfTodayInAddis, summarizeDeals } from "@/lib/telegram/stats";
+import { startOfTodayInAddis, summarizeDeals } from "@/lib/telegram/stats";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -38,69 +38,6 @@ export async function getTelegramSales() {
     pending,
     aiEnabled: aiEnabled(),
     model: AI_MODEL,
-  };
-}
-
-export async function getTelegramOverview() {
-  const today = startOfTodayInAddis();
-  const [connections, todayMessages, waiting, openAlerts, alerts, chats] = await Promise.all([
-    db.telegramConnection.findMany({
-      orderBy: { createdAt: "asc" },
-      select: { id: true, ownerName: true, ownerUsername: true, isEnabled: true, canReply: true },
-    }),
-    db.telegramMessage.findMany({ where: { sentAt: { gte: today } }, orderBy: { sentAt: "asc" }, select: { chatId: true, direction: true, sentAt: true } }),
-    db.telegramChat.count({ where: { lastDirection: "IN" } }),
-    db.telegramAlert.count({ where: { resolved: false } }),
-    db.telegramAlert.findMany({
-      where: { resolved: false },
-      orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-      take: 50,
-      select: {
-        id: true,
-        type: true,
-        severity: true,
-        evidence: true,
-        createdAt: true,
-        chat: { select: { id: true, name: true, connection: { select: { ownerName: true } } } },
-        message: { select: { text: true } },
-      },
-    }),
-    db.telegramChat.findMany({
-      orderBy: { lastMessageAt: "desc" },
-      take: 30,
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        lastMessageAt: true,
-        lastDirection: true,
-        connection: { select: { ownerName: true } },
-        messages: { orderBy: [{ sentAt: "desc" }, { messageId: "desc" }], take: 1, select: { text: true, mediaType: true, direction: true } },
-        _count: { select: { alerts: { where: { resolved: false } } } },
-      },
-    }),
-  ]);
-
-  // የሰራተኛ (OUT) መልዕክቶች ቁጥር 0 ከሆነ ቴሌግራም የላኳቸውን መልዕክቶች ለቦቱ እንደማይልክ ያሳያል።
-  const connectionCounts = await Promise.all(
-    connections.map(async (connection) => {
-      const [inbound, outbound] = await Promise.all([
-        db.telegramMessage.count({ where: { chat: { connectionId: connection.id }, direction: "IN" } }),
-        db.telegramMessage.count({ where: { chat: { connectionId: connection.id }, direction: "OUT" } }),
-      ]);
-      return { ...connection, inbound, outbound };
-    })
-  );
-
-  return {
-    connections: connectionCounts,
-    inboundToday: todayMessages.filter((message) => message.direction === "IN").length,
-    outboundToday: todayMessages.filter((message) => message.direction === "OUT").length,
-    replies: replyStats(todayMessages),
-    waiting,
-    openAlerts,
-    alerts,
-    chats,
   };
 }
 

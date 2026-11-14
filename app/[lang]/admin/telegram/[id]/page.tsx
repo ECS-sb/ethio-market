@@ -1,190 +1,46 @@
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
-import { ActionButton } from "@/components/action-form";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { LocaleLink } from "@/components/i18n-provider";
-import { Badge } from "@/components/ui/badge";
-import { analyzeTelegramChatAction, resolveTelegramAlertAction } from "@/lib/actions";
-import { formatDateTime, formatPrice } from "@/lib/catalog";
-import type { T } from "@/lib/i18n";
-import { getT, pageTitle } from "@/lib/i18n-server";
+import { ChatView } from "@/components/telegram/chat-view";
+import { Inbox } from "@/components/telegram/inbox";
+import { TelegramHeader } from "@/components/telegram/telegram-header";
+import { pageTitle } from "@/lib/i18n-server";
 import { requireAdmin } from "@/lib/session";
-import { alertLabels, dealKindLabels, dealStatusLabels, evidenceText, mediaLabels, paymentLabel, severityLabels } from "@/lib/telegram/labels";
-import { getTelegramChat, TELEGRAM_CHAT_PAGE } from "@/lib/telegram/queries";
-import { cn } from "@/lib/utils";
+import { inboxQuery, parseInboxParams } from "@/lib/telegram/folders";
+import { getInbox } from "@/lib/telegram/inbox";
+import { getTelegramChat } from "@/lib/telegram/queries";
 
 export const generateMetadata = pageTitle("Telegram chat");
 
 /** "ይህንን ቻት ተንትን" አዝራሩ Claude እስኪጨርስ ይጠብቃል። */
 export const maxDuration = 300;
 
-const severityVariant = { HIGH: "destructive", MEDIUM: "default", LOW: "outline" } as const;
-
-type ReceiptView = {
-  isReceipt: boolean;
-  provider: string | null;
-  amountEtb: number | null;
-  recipientName: string | null;
-  recipientAccount: string | null;
-  transactionId: string | null;
-  toCompany: boolean | null;
-};
-
-function receiptLine(t: T, receipt: ReceiptView): string {
-  if (!receipt.isReceipt) return t("Not a payment receipt");
-  const recipient = [receipt.recipientName, receipt.recipientAccount].filter(Boolean).join(" ");
-  const parts = [receipt.provider, receipt.amountEtb === null ? null : formatPrice(t, Math.round(receipt.amountEtb)), recipient ? `→ ${recipient}` : null, receipt.transactionId];
-  return `${t("Receipt")}: ${parts.filter(Boolean).join(" · ")}`;
-}
-
-export default async function AdminTelegramChatPage({ params }: { params: Promise<{ id: string }> }) {
-  const t = await getT();
+export default async function AdminTelegramChatPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireAdmin();
   const { id } = await params;
-  const chat = await getTelegramChat(id);
+  const inboxParams = parseInboxParams(await searchParams);
+  const now = new Date();
+  const [chat, inbox] = await Promise.all([getTelegramChat(id), getInbox(inboxParams)]);
   if (!chat) notFound();
-  const openAlerts = chat.alerts.filter((alert) => !alert.resolved);
 
   return (
     <>
-      <AutoRefresh />
-      <LocaleLink href="/admin/telegram" className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeftIcon className="size-4" />
-        {t("Telegram monitoring")}
-      </LocaleLink>
-
-      {openAlerts.length > 0 ? (
-        <ul className="flex flex-col gap-4">
-          {openAlerts.map((alert) => (
-            <li key={alert.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-card/70 p-6 text-sm ring-1 ring-destructive/40">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={severityVariant[alert.severity]}>{t(severityLabels[alert.severity])}</Badge>
-                <span className="font-semibold">{t(alertLabels[alert.type])}</span>
-                <code dir="ltr" className="rounded-xl bg-muted px-2 py-0.5 text-xs break-all">
-                  {evidenceText(t, alert.type, alert.evidence)}
-                </code>
-                <span className="text-muted-foreground">{formatDateTime(alert.createdAt)}</span>
-              </div>
-              <ActionButton action={resolveTelegramAlertAction} id={alert.id} variant="outline">
-                {t("Mark resolved")}
-              </ActionButton>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {chat.aiEnabled || chat.aiSummary ? (
-        <section className="flex flex-col gap-4 rounded-xl bg-card/70 p-6 text-sm ring-1 ring-foreground/10">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-base font-semibold">{t("AI summary")}</h2>
-              {chat.analyzedAt ? (
-                <span className="text-xs text-muted-foreground">{t("Analyzed {date}", { date: formatDateTime(chat.analyzedAt) })}</span>
-              ) : null}
-            </div>
-            {chat.aiEnabled ? (
-              <ActionButton action={analyzeTelegramChatAction} id={chat.id} variant="outline">
-                {t("Analyze this chat")}
-              </ActionButton>
-            ) : null}
-          </div>
-          {chat.aiSummary ? <p className="break-words whitespace-pre-line">{chat.aiSummary}</p> : null}
-          {chat.deals.length > 0 ? (
-            <ul className="flex flex-col gap-2">
-              {chat.deals.map((deal) => (
-                <li key={deal.id} className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{t(dealKindLabels[deal.kind])}</Badge>
-                  <span className="font-medium break-words">{deal.item}</span>
-                  {deal.amountEtb !== null ? <span>· {formatPrice(t, deal.amountEtb)}</span> : null}
-                  <Badge variant="secondary">{t(dealStatusLabels[deal.status])}</Badge>
-                  {deal.status === "PAID" || deal.status === "DELIVERED" ? (
-                    <Badge variant={deal.paidToCompany === false ? "destructive" : deal.paidToCompany ? "default" : "outline"}>
-                      {t(paymentLabel(deal.paidToCompany))}
-                    </Badge>
-                  ) : null}
-                  {deal.note ? <span className="text-muted-foreground">· {deal.note}</span> : null}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </section>
-      ) : null}
-
-      <section
-        aria-label={t("Chat with {name}", { name: chat.name })}
-        className="flex min-w-0 flex-col gap-6 rounded-xl bg-card/70 p-6 ring-1 ring-foreground/10"
-      >
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
-          <div className="flex flex-col gap-1">
-            <h1 className="font-semibold">{chat.name}</h1>
-            <span className="text-xs text-muted-foreground">
-              {chat.username ? <span dir="ltr">@{chat.username} · </span> : null}
-              {chat.connection.ownerName}
-            </span>
-          </div>
-          {chat.username ? (
-            <a
-              href={`https://t.me/${chat.username}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <ExternalLinkIcon className="size-4" />
-              {t("Open in Telegram")}
-            </a>
-          ) : null}
-        </header>
-
-        {chat.truncated ? <p className="text-xs text-muted-foreground">{t("Showing the latest {count} messages.", { count: TELEGRAM_CHAT_PAGE })}</p> : null}
-
-        <div className="flex min-h-72 flex-col gap-4">
-          {chat.messages.map((message) => {
-            const outgoing = message.direction === "OUT";
-            const media = message.mediaType ? t(mediaLabels[message.mediaType] ?? "Media") : null;
-            return (
-              <div key={message.id} className={cn("flex max-w-[80%] flex-col gap-1", outgoing ? "items-end self-end" : "items-start self-start")}>
-                <div
-                  className={cn(
-                    "rounded-xl px-4 py-2 text-sm break-words whitespace-pre-line",
-                    outgoing ? "bg-primary text-primary-foreground" : "bg-secondary",
-                    message.flagged && "ring-2 ring-destructive",
-                    message.deletedAt && "opacity-60"
-                  )}
-                >
-                  {media ? <span className="block text-xs font-semibold">[{media}]</span> : null}
-                  {message.text}
-                </div>
-                {message.receipt ? (
-                  <p
-                    className={cn(
-                      "flex flex-wrap items-center gap-2 text-xs break-words",
-                      message.receipt.isReceipt && message.receipt.toCompany === false ? "text-destructive" : "text-muted-foreground"
-                    )}
-                  >
-                    <span dir="auto">{receiptLine(t, message.receipt)}</span>
-                    {message.receipt.isReceipt ? (
-                      <Badge variant={message.receipt.toCompany === false ? "destructive" : message.receipt.toCompany ? "default" : "outline"}>
-                        {t(paymentLabel(message.receipt.toCompany))}
-                      </Badge>
-                    ) : null}
-                  </p>
-                ) : null}
-                {message.previousText !== null ? (
-                  <p className="text-xs break-words whitespace-pre-line text-muted-foreground">
-                    {t("Before edit:")} {message.previousText}
-                  </p>
-                ) : null}
-                <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {outgoing ? (message.viaBot ? t("Sent by bot") : t("Staff")) : t("Customer")} · {formatDateTime(message.sentAt)}
-                  {message.editedAt ? <Badge variant="outline">{t("Edited")}</Badge> : null}
-                  {message.deletedAt ? <Badge variant="destructive">{t("Deleted")}</Badge> : null}
-                </span>
-              </div>
-            );
-          })}
-          {chat.messages.length === 0 ? <p className="m-auto text-sm text-muted-foreground">{t("No messages saved for this chat yet.")}</p> : null}
+      <AutoRefresh intervalMs={20000} />
+      {/* በስልክ ላይ ቻቱ ብቻ ይታያል፤ ዝርዝሩ በ"ተመለስ" ቀስት ይመጣል። */}
+      <div className="hidden lg:block">
+        <TelegramHeader inbox={inbox} />
+      </div>
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[22rem_1fr]">
+        <div className="hidden min-w-0 lg:block">
+          <Inbox inbox={inbox} params={inboxParams} basePath={`/admin/telegram/${id}`} selectedId={id} now={now} />
         </div>
-      </section>
+        <ChatView chat={chat} backHref={`/admin/telegram${inboxQuery(inboxParams)}`} />
+      </div>
     </>
   );
 }

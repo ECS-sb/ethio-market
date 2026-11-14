@@ -641,6 +641,22 @@ export const am = {
   "Sales: {count} · paid {amount} ETB": "ሽያጮች፦ {count} · የተከፈለ {amount} ብር",
   "Course registrations: {count}": "የኮርስ ምዝገባዎች፦ {count}",
   "Payments not yet verified: {count}": "ያልተረጋገጡ ክፍያዎች፦ {count}",
+
+  // ---- የቴሌግራም ገጽ (እንደ ቴሌግራም ፎልደሮች)
+  "All chats": "ሁሉም ቻቶች",
+  "With alerts": "ማስጠንቀቂያ ያላቸው",
+  "Registrations": "ምዝገባዎች",
+  "Sent receipts": "ደረሰኝ የላኩ",
+  "Folders": "ፎልደሮች",
+  "Search chats": "ቻት ፈልግ (ስም ወይም @username)",
+  "All accounts": "ሁሉም አካውንቶች",
+  "No chats match your search.": "ከፍለጋዎ ጋር የሚመሳሰል ቻት የለም።",
+  "No chats in this folder.": "በዚህ ፎልደር ውስጥ ቻት የለም።",
+  "Showing the latest {count} chats.": "የመጨረሻዎቹ {count} ቻቶች ይታያሉ።",
+  "People who messaged": "መልዕክት የላኩ ሰዎች",
+  "Back to chats": "ወደ ቻቶቹ ተመለስ",
+  "Select a chat to read it.": "ለማንበብ ከግራ በኩል ቻት ይምረጡ።",
+  "{count} deals": "{count} ስምምነት",
 } as const;
 
 export type MessageKey = keyof typeof am;
