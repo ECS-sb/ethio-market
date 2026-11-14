@@ -106,7 +106,9 @@ export async function sendAlertNotifications(alerts: NewAlert[]) {
       `<code>${escapeHtml(evidenceText(t, alert.type, alert.evidence))}</code>`,
     ];
     if (alert.excerpt) lines.push(`<blockquote>${escapeHtml(alert.excerpt)}</blockquote>`);
-    const chatLink = link(adminUrl(locale, `/admin/telegram/${alert.chatRowId}`), t("Open the chat"));
+    // ሊንኩ በቀጥታ ወደ ጉዳዩ መልዕክት ይሄዳል (የተሰረዘም ቢሆን ቅጂው ይታያል)።
+    const anchor = alert.messageRowId ? `#m-${alert.messageRowId}` : "";
+    const chatLink = link(adminUrl(locale, `/admin/telegram/${alert.chatRowId}${anchor}`), t("Open the message"));
     if (chatLink) lines.push(chatLink);
     await notifyOwners(lines.join("\n"));
   }

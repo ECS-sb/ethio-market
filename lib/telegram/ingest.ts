@@ -1,11 +1,14 @@
 import "server-only";
 import { db } from "@/lib/db";
+import type { Prisma } from "@/lib/generated/prisma/client";
 import { getBusinessConnection } from "@/lib/telegram/api";
 import { detectSideDeal, parseAllowlist, usernameFromEvidence, type Finding } from "@/lib/telegram/detect";
+import { mediaKind } from "@/lib/telegram/media-kind";
+import { extractContactDetails, mentionsWithdrawal, mergeProfile, readProfile, sameProfile, WITHDRAWAL_TAG } from "@/lib/telegram/profile";
 import type { TgBusinessConnection, TgBusinessMessagesDeleted, TgChat, TgMessage, TgUpdate, TgUser } from "@/lib/telegram/types";
 
-/** ለባለቤቱ ወዲያውኑ የሚላክ አዲስ ከፍተኛ ማስጠንቀቂያ። */
-export type NewAlert = Finding & { chatRowId: string; chatName: string; accountName: string; excerpt: string };
+/** ለባለቤቱ ወዲያውኑ የሚላክ አዲስ ከፍተኛ ማስጠንቀቂያ። messageRowId ሊንኩ በቀጥታ ወደ መልዕክቱ እንዲሄድ ነው። */
+export type NewAlert = Finding & { chatRowId: string; messageRowId: string | null; chatName: string; accountName: string; excerpt: string };
 
 function userName(user: TgUser): string {
   return [user.first_name, user.last_name].filter(Boolean).join(" ") || (user.username ? `@${user.username}` : String(user.id));
@@ -33,7 +36,15 @@ function readContent(message: TgMessage) {
   const found = media.find(([, fileId]) => fileId);
   const mediaType = found?.[0] ?? (message.contact ? "contact" : message.location ? "location" : null);
   const contactText = message.contact ? `${message.contact.first_name} ${message.contact.phone_number}` : "";
-  const mimeType = mediaType === "photo" ? "image/jpeg" : mediaType === "document" ? (message.document?.mime_type ?? null) : null;
+  const mimeByType: Record<string, string | null> = {
+    photo: "image/jpeg",
+    document: message.document?.mime_type ?? null,
+    video: message.video?.mime_type ?? "video/mp4",
+    video_note: "video/mp4",
+    voice: message.voice?.mime_type ?? "audio/ogg",
+    audio: message.audio?.mime_type ?? "audio/mpeg",
+  };
+  const mimeType = mediaType ? (mimeByType[mediaType] ?? null) : null;
   return {
     text: text || contactText,
     mediaType,
@@ -101,10 +112,26 @@ export async function recordAlerts(chat: { id: string; name: string }, messageRo
   });
   return fresh
     .filter((finding) => finding.severity === "HIGH")
-    .map((finding): NewAlert => ({ ...finding, chatRowId: chat.id, chatName: chat.name, accountName, excerpt: excerpt.slice(0, 300) }));
+    .map((finding): NewAlert => ({ ...finding, chatRowId: chat.id, messageRowId, chatName: chat.name, accountName, excerpt: excerpt.slice(0, 300) }));
 }
 
-type SavedMessage = { alerts: NewAlert[]; receiptCandidate: string | null };
+type SavedMessage = { alerts: NewAlert[]; receiptCandidate: string | null; mediaCopy: string | null };
+
+/** የገንዘብ ማውጣት ርዕስ እና (ደንበኛው ከጻፈ) ስልኩ/ኢሜይሉ/አካውንቶቹ ወደ ቻቱ ፕሮፋይል ይጨመራሉ። */
+async function updateChatDetails(
+  chat: { id: string; profile: Prisma.JsonValue | null; tags: string[] },
+  content: { text: string; scanText: string; contactPhone?: string },
+  outgoing: boolean
+) {
+  const data: Prisma.TelegramChatUpdateInput = {};
+  if (!chat.tags.includes(WITHDRAWAL_TAG) && mentionsWithdrawal(content.text)) data.tags = [...chat.tags, WITHDRAWAL_TAG];
+  if (!outgoing) {
+    const current = readProfile(chat.profile);
+    const merged = mergeProfile(current, extractContactDetails(content.scanText, content.contactPhone));
+    if (!sameProfile(current, merged)) data.profile = merged;
+  }
+  if (Object.keys(data).length > 0) await db.telegramChat.update({ where: { id: chat.id }, data });
+}
 
 /** ደንበኛ የላከው ፎቶ ወይም ፋይል (ምስል/PDF) የክፍያ ደረሰኝ ሊሆን ስለሚችል Claude ያነበዋል። */
 export function canHoldReceipt(mediaType: string | null, mimeType: string | null): boolean {
@@ -113,7 +140,7 @@ export function canHoldReceipt(mediaType: string | null, mimeType: string | null
 }
 
 async function saveMessage(message: TgMessage, isEdit: boolean): Promise<SavedMessage> {
-  if (!message.business_connection_id) return { alerts: [], receiptCandidate: null };
+  if (!message.business_connection_id) return { alerts: [], receiptCandidate: null, mediaCopy: null };
   const connection = await ensureConnection(message.business_connection_id);
   const viaBot = Boolean(message.sender_business_bot);
   const outgoing = viaBot || (message.from !== undefined && BigInt(message.from.id) === connection.ownerId);
@@ -174,12 +201,16 @@ async function saveMessage(message: TgMessage, isEdit: boolean): Promise<SavedMe
     row = await db.telegramMessage.upsert({ where: key, create: base, update: {}, select: { id: true } });
   }
 
+  await updateChatDetails(chat, content, outgoing);
+  // ፎቶው ቢሰረዝም እንዲታይ ቅጂው ወዲያውኑ ይቀመጣል (ከሁለቱም ወገን)።
+  const mediaCopy = !isEdit && mediaKind(content.mediaType, content.mimeType) === "image" ? row.id : null;
+
   if (!outgoing) {
     const receiptCandidate = !isEdit && canHoldReceipt(content.mediaType, content.mimeType) ? row.id : null;
-    return { alerts: [], receiptCandidate };
+    return { alerts: [], receiptCandidate, mediaCopy };
   }
   const findings = await dropListedAccounts(detectSideDeal(content.scanText, await loadAllowlist(), { contactPhone: content.contactPhone }));
-  return { alerts: await recordAlerts(chat, row.id, connection.ownerName, content.text, findings), receiptCandidate: null };
+  return { alerts: await recordAlerts(chat, row.id, connection.ownerName, content.text, findings), receiptCandidate: null, mediaCopy };
 }
 
 async function saveDeletion(deleted: TgBusinessMessagesDeleted): Promise<NewAlert[]> {
@@ -217,18 +248,20 @@ async function saveDeletion(deleted: TgBusinessMessagesDeleted): Promise<NewAler
 
 /**
  * አንድን የቴሌግራም update ያስቀምጣል። ለባለቤቱ መላክ ያለባቸውን አዲስ ከፍተኛ ማስጠንቀቂያዎች፣
- * እና Claude ሊያነበው የሚገባ የደረሰኝ መልዕክት (ካለ) ይመልሳል።
+ * Claude ሊያነበው የሚገባ የደረሰኝ መልዕክት፣ እና ቅጂው መቀመጥ ያለበት ፎቶ (ካሉ) ይመልሳል።
  */
-export async function handleBusinessUpdate(update: TgUpdate): Promise<{ alerts: NewAlert[]; receiptMessageIds: string[] }> {
+export async function handleBusinessUpdate(update: TgUpdate): Promise<{ alerts: NewAlert[]; receiptMessageIds: string[]; mediaMessageIds: string[] }> {
   const alerts: NewAlert[] = [];
   const receiptMessageIds: string[] = [];
+  const mediaMessageIds: string[] = [];
   const collect = (saved: SavedMessage) => {
     alerts.push(...saved.alerts);
     if (saved.receiptCandidate) receiptMessageIds.push(saved.receiptCandidate);
+    if (saved.mediaCopy) mediaMessageIds.push(saved.mediaCopy);
   };
   if (update.business_connection) await saveConnection(update.business_connection);
   if (update.business_message) collect(await saveMessage(update.business_message, false));
   if (update.edited_business_message) collect(await saveMessage(update.edited_business_message, true));
   if (update.deleted_business_messages) alerts.push(...(await saveDeletion(update.deleted_business_messages)));
-  return { alerts, receiptMessageIds };
+  return { alerts, receiptMessageIds, mediaMessageIds };
 }

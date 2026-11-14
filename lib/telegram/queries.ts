@@ -50,8 +50,14 @@ export async function getTelegramChat(id: string) {
       id: true,
       name: true,
       username: true,
+      chatId: true,
+      createdAt: true,
+      lastInboundAt: true,
       aiSummary: true,
       analyzedAt: true,
+      profile: true,
+      tags: true,
+      _count: { select: { messages: true } },
       connection: { select: { ownerName: true, ownerUsername: true } },
       deals: {
         orderBy: { dealAt: "desc" },
@@ -75,6 +81,8 @@ export async function getTelegramChat(id: string) {
       viaBot: true,
       text: true,
       mediaType: true,
+      mimeType: true,
+      mediaFile: { select: { width: true, height: true } },
       sentAt: true,
       editedAt: true,
       previousText: true,
@@ -87,6 +95,8 @@ export async function getTelegramChat(id: string) {
   const flagged = new Set(chat.alerts.filter((alert) => !alert.resolved && alert.messageId).map((alert) => alert.messageId));
   return {
     ...chat,
+    // BigInt ወደ ብራውዘር (client component) ሊላክ ስለማይችል ጽሑፍ ይደረጋል።
+    chatId: chat.chatId.toString(),
     messages: messages.reverse().map((message) => ({ ...message, flagged: flagged.has(message.id) })),
     truncated: messages.length === TELEGRAM_CHAT_PAGE,
     aiEnabled: aiEnabled(),

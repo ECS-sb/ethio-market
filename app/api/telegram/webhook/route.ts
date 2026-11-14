@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { after, type NextRequest } from "next/server";
 import { analyzeIncomingReceipts } from "@/lib/telegram/analyze";
 import { handleBusinessUpdate } from "@/lib/telegram/ingest";
+import { storeMediaCopies } from "@/lib/telegram/media";
 import { handleBotChat, sendAlertNotifications } from "@/lib/telegram/report";
 import type { TgUpdate } from "@/lib/telegram/types";
 
@@ -28,8 +29,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { alerts, receiptMessageIds } = await handleBusinessUpdate(update);
+    const { alerts, receiptMessageIds, mediaMessageIds } = await handleBusinessUpdate(update);
     if (alerts.length > 0) after(() => sendAlertNotifications(alerts));
+    if (mediaMessageIds.length > 0) after(() => storeMediaCopies(mediaMessageIds));
     if (receiptMessageIds.length > 0) {
       after(async () => {
         const receiptAlerts = await analyzeIncomingReceipts(receiptMessageIds);

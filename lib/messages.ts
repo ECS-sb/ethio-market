@@ -658,6 +658,31 @@ export const am = {
   "Back to chats": "ወደ ቻቶቹ ተመለስ",
   "Select a chat to read it.": "ለማንበብ ከግራ በኩል ቻት ይምረጡ።",
   "{count} deals": "{count} ስምምነት",
+
+  // ---- ሚዲያ፣ የደንበኛ ፕሮፋይል፣ ንቁነት፣ ገንዘብ ማውጣት
+  "Open full size": "በሙሉ መጠን ክፈት",
+  "Open file": "ፋይሉን ክፈት",
+  "Show deleted message": "የተሰረዘውን መልዕክት አሳይ",
+  "Go to message": "ወደ መልዕክቱ ሂድ",
+  "Open the message": "መልዕክቱን ክፈት",
+  "Active now": "አሁን ንቁ",
+  "Last active {time}": "የመጨረሻ መልዕክት፦ {time}",
+  "Withdrawals": "ገንዘብ ማውጣት",
+  "Customer details": "የደንበኛው ዝርዝር",
+  "Username": "የተጠቃሚ ስም",
+  "Telegram user ID": "የቴሌግራም መለያ ቁጥር (ID)",
+  "Phone numbers": "ስልክ ቁጥሮች",
+  "Emails": "ኢሜይሎች",
+  "Accounts brought for sale": "ለሽያጭ ያመጧቸው አካውንቶች",
+  "Other accounts and links": "ሌሎች አካውንቶችና ሊንኮች",
+  "Notes": "ማስታወሻ",
+  "The customer hasn't shared a phone number or account yet.": "ደንበኛው እስካሁን ስልክ ቁጥር ወይም አካውንት አላጋሩም።",
+  "First message": "የመጀመሪያ መልዕክት",
+  "Deals": "ስምምነቶች",
+  "Copy": "ኮፒ",
+  "Copy {item}": "{item} ኮፒ አድርግ",
+  "Copied": "ኮፒ ተደርጓል",
+  "Couldn't copy. Select the text and copy it yourself.": "ኮፒ ማድረግ አልተቻለም። ጽሑፉን መርጠው ራስዎ ኮፒ ያድርጉ።",
 } as const;
 
 export type MessageKey = keyof typeof am;

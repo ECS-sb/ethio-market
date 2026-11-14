@@ -326,6 +326,10 @@ model TelegramChat {
   /// Claude የጻፈው የቻቱ አጭር ማጠቃለያ እና የተተነተነበት ጊዜ
   aiSummary      String?
   analyzedAt     DateTime?
+  /// ደንበኛው ያጋራቸው ዝርዝሮች (ስልክ፣ ኢሜይል፣ አካውንቶች፣ ለሽያጭ ያመጣቸው)፤ ቅርጹ በlib/telegram/profile.ts ውስጥ ነው።
+  profile        Json?
+  /// በቁልፍ ቃል ወይም በAI የተገኙ ርዕሶች፤ ለምሳሌ "withdrawal" (ከቲክቶክ ገንዘብ ማውጣት፣ የPayPal/ዶላር ምንዛሬ)
+  tags           String[]           @default([])
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -357,8 +361,9 @@ model TelegramMessage {
   deletedAt    DateTime?
   createdAt    DateTime          @default(now())
 
-  alerts  TelegramAlert[]
-  receipt TelegramReceipt?
+  alerts    TelegramAlert[]
+  receipt   TelegramReceipt?
+  mediaFile TelegramMediaFile?
 
   @@unique([chatId, messageId])
   @@index([sentAt])
@@ -424,4 +429,18 @@ model TelegramReceipt {
 
   @@index([transactionId])
   @@map("telegram_receipt")
+}
+
+/// የፎቶው የተጨመቀ ቅጂ (WebP)፤ ፎቶው በቴሌግራም ቢሰረዝም ማስረጃው እንዲቀር መልዕክቱ ሲመጣ ይቀመጣል።
+model TelegramMediaFile {
+  id        String          @id @default(cuid())
+  messageId String          @unique
+  message   TelegramMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  mimeType  String
+  width     Int
+  height    Int
+  data      Bytes
+  createdAt DateTime        @default(now())
+
+  @@map("telegram_media_file")
 }

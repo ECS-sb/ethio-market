@@ -55,6 +55,14 @@ export const ChatAnalysisSchema = z.object({
     reason: z.string(),
     message_numbers: z.array(z.number().int()),
   }),
+  customer: z.object({
+    phones: z.array(z.string()),
+    emails: z.array(z.string()),
+    accounts_for_sale: z.array(z.object({ platform: z.string(), handle_or_link: z.string(), details: z.string() })),
+    other_accounts: z.array(z.object({ platform: z.string(), handle_or_link: z.string() })),
+    notes: z.string(),
+  }),
+  topics: z.array(z.enum(["TIKTOK_WITHDRAWAL", "PAYPAL_EXCHANGE"])),
 });
 export type ChatAnalysis = z.infer<typeof ChatAnalysisSchema>;
 
@@ -79,7 +87,14 @@ const CHAT_TASK = `Task: read one chat transcript between a customer and the com
    - evidence_message_numbers: the numbers of the messages that show the deal's current status.
    - note: one short line in Amharic, or "".
 2. side_deal_suspicion: does a staff member try to take the customer or the payment outside the company? Signs: a personal phone number or account (also written out in words), "pay me directly", moving the chat to another app or account, a discount for paying privately, or deleting messages right after sharing such details. suspected is false when nothing like this happens. reason is one short sentence in Amharic (or "" when not suspected); message_numbers lists the messages involved.
-3. summary: one or two sentences in Amharic about what happened in the chat.`;
+3. summary: one or two sentences in Amharic about what happened in the chat.
+4. customer: details the CUSTOMER shared about themselves (not the company's or staff's details).
+   - phones and emails: as written.
+   - accounts_for_sale: social media accounts or channels the customer wants to SELL to the company, with platform (YouTube, TikTok, Instagram, Telegram, Facebook, X or other), the handle or link as written, and details such as followers, subscribers, earnings or the asking price ("" if none).
+   - other_accounts: other accounts or links of the customer that are not for sale.
+   - Never copy passwords, verification or login codes, PINs or recovery codes, even when the customer sends them.
+   - notes: one short line in Amharic with other useful facts about the customer (for example city, what they need, their budget), or "".
+5. topics: TIKTOK_WITHDRAWAL when the customer asks the company to withdraw or cash out money or rewards from TikTok (or another platform) for them; PAYPAL_EXCHANGE when they want PayPal, Payoneer, dollar or other foreign balances exchanged to birr (or the reverse). An empty list when neither applies.`;
 
 function request(task: string, company: string) {
   return {

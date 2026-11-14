@@ -41,7 +41,7 @@ export default async function AdminTelegramChatPage({
         <div className="hidden min-w-0 lg:block">
           <Inbox inbox={inbox} params={inboxParams} basePath={`/admin/telegram/${id}`} selectedId={id} now={now} />
         </div>
-        <ChatView chat={chat} backHref={`/admin/telegram${inboxQuery(inboxParams)}`} />
+        <ChatView chat={chat} backHref={`/admin/telegram${inboxQuery(inboxParams)}`} now={now} />
       </div>
     </>
   );

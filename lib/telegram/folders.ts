@@ -1,7 +1,7 @@
 // እንደ ቴሌግራም ፎልደሮች፦ ቻቶቹ በምድብ ይከፈላሉ። ምንም database አይጠቀምም።
 import type { MessageKey } from "@/lib/messages";
 
-export const FOLDERS = ["all", "waiting", "alerts", "progress", "paid", "sales", "registrations", "receipts"] as const;
+export const FOLDERS = ["all", "waiting", "alerts", "progress", "paid", "sales", "registrations", "withdrawals", "receipts"] as const;
 export type Folder = (typeof FOLDERS)[number];
 
 /** ሁሉም ፎልደሮች በአንድ መስመር እንዲገቡ አጫጭር ስሞች። */
@@ -13,6 +13,7 @@ export const folderLabels: Record<Folder, MessageKey> = {
   paid: "Paid",
   sales: "Sales",
   registrations: "Registrations",
+  withdrawals: "Withdrawals",
   receipts: "Receipts",
 };
 

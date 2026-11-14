@@ -16,6 +16,14 @@ export function chatListTime(date: Date, now: Date): string {
   return dayKey(date) === dayKey(now) ? timeFormat.format(date) : shortDateFormat.format(date);
 }
 
+/**
+ * ቴሌግራም የደንበኛውን "online" ሁኔታ ለቦቶች አይሰጥም፤ ስለዚህ የደንበኛው የመጨረሻ መልዕክት
+ * በ5 ደቂቃ ውስጥ ከሆነ "አሁን ንቁ" ተብሎ ይቆጠራል።
+ */
+export function isRecentlyActive(lastInboundAt: Date | null, now: Date): boolean {
+  return lastInboundAt !== null && now.getTime() - lastInboundAt.getTime() < 5 * 60 * 1000;
+}
+
 export function messageTime(date: Date): string {
   return timeFormat.format(date);
 }

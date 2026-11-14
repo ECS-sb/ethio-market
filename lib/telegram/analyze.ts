@@ -4,8 +4,9 @@ import { db } from "@/lib/db";
 import { aiEnabled, analyzeTranscript, readReceipt } from "@/lib/telegram/ai";
 import { downloadTelegramFile } from "@/lib/telegram/api";
 import { decideToCompany, describeCompany, loadCompanyProfile } from "@/lib/telegram/company";
-import type { Finding } from "@/lib/telegram/detect";
+import { normalizePhone, type Finding } from "@/lib/telegram/detect";
 import { canHoldReceipt, recordAlerts, type NewAlert } from "@/lib/telegram/ingest";
+import { extractContactDetails, mentionsWithdrawal, mergeProfile, readProfile, WITHDRAWAL_TAG } from "@/lib/telegram/profile";
 import { buildTranscript } from "@/lib/telegram/transcript";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -94,7 +95,7 @@ export async function analyzeChat(chatRowId: string): Promise<boolean> {
   if (!aiEnabled()) return false;
   const chat = await db.telegramChat.findUnique({
     where: { id: chatRowId },
-    select: { id: true, name: true, connection: { select: { ownerName: true } } },
+    select: { id: true, name: true, profile: true, tags: true, connection: { select: { ownerName: true } } },
   });
   if (!chat) return false;
   const startedAt = new Date();
@@ -151,11 +152,35 @@ export async function analyzeChat(chatRowId: string): Promise<boolean> {
     };
   });
 
+  // የደንበኛው ዝርዝሮች፦ ከመልዕክቶቹ በህግ የተገኙት እና Claude ያወጣቸው (ለሽያጭ ያመጣቸውን የሚለየው Claude ነው)።
+  const isCompanyPhone = (phone: string) => company.allow.phones.has(phone);
+  let profile = readProfile(chat.profile);
+  for (const message of messages) {
+    if (message.direction === "IN") profile = mergeProfile(profile, extractContactDetails(message.text));
+  }
+  const shared = result.customer;
+  const cleanAccount = (account: { platform: string; handle_or_link: string }) => ({ platform: account.platform.trim() || "Other", value: account.handle_or_link.trim() });
+  profile = mergeProfile(profile, {
+    phones: shared.phones.map((phone) => normalizePhone(phone) ?? phone.trim()).filter((phone) => phone && !isCompanyPhone(phone)),
+    emails: shared.emails.map((email) => email.trim().toLowerCase()).filter(Boolean),
+    forSale: shared.accounts_for_sale
+      .filter((account) => account.handle_or_link.trim())
+      .map((account) => ({ ...cleanAccount(account), ...(account.details.trim() ? { details: account.details.trim().slice(0, 200) } : {}) })),
+    accounts: shared.other_accounts.filter((account) => account.handle_or_link.trim()).map(cleanAccount),
+    notes: shared.notes,
+  });
+  profile = { ...profile, phones: profile.phones.filter((phone) => !isCompanyPhone(phone)) };
+  const withdrawal = result.topics.length > 0 || messages.some((message) => mentionsWithdrawal(message.text));
+  const tags = withdrawal && !chat.tags.includes(WITHDRAWAL_TAG) ? [...chat.tags, WITHDRAWAL_TAG] : chat.tags;
+
   await db.$transaction([
     db.telegramDeal.deleteMany({ where: { chatId: chat.id, dealAt: { gte: messages[0].sentAt } } }),
     db.telegramDeal.createMany({ data: deals }),
     // የትንተናው መጀመሪያ ጊዜ ይመዘገባል፤ በትንተናው ጊዜ የመጡ መልዕክቶች በቀጣዩ ዙር ይታያሉ።
-    db.telegramChat.update({ where: { id: chat.id }, data: { aiSummary: result.summary.slice(0, 1000), analyzedAt: startedAt } }),
+    db.telegramChat.update({
+      where: { id: chat.id },
+      data: { aiSummary: result.summary.slice(0, 1000), analyzedAt: startedAt, profile, tags },
+    }),
   ]);
 
   const suspicion = result.side_deal_suspicion;

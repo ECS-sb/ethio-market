@@ -1,5 +1,6 @@
 import {
   BadgeDollarSignIcon,
+  BanknoteIcon,
   CircleCheckIcon,
   ClockIcon,
   GraduationCapIcon,
@@ -23,6 +24,7 @@ const folderIcons: Record<Folder, LucideIcon> = {
   paid: CircleCheckIcon,
   sales: BadgeDollarSignIcon,
   registrations: GraduationCapIcon,
+  withdrawals: BanknoteIcon,
   receipts: ReceiptIcon,
 };
 

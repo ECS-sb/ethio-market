@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/catalog";
 import { localePath, type T } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n-server";
 import { inboxQuery, type Folder, type InboxParams } from "@/lib/telegram/folders";
-import { chatListTime } from "@/lib/telegram/format";
+import { chatListTime, isRecentlyActive } from "@/lib/telegram/format";
 import type { Inbox as InboxData } from "@/lib/telegram/inbox";
 import { alertLabels, dealStatusLabels, evidenceText, mediaLabels } from "@/lib/telegram/labels";
 import { cn } from "@/lib/utils";
@@ -83,14 +83,16 @@ export async function Inbox({
           {inbox.chats.map((chat) => {
             const line = preview(t, chat, params.folder);
             const selected = chat.id === selectedId;
+            // በማስጠንቀቂያ ፎልደር ውስጥ ሲነካ በቀጥታ ወደ ጉዳዩ መልዕክት (የተሰረዘም ቢሆን) ይሄዳል።
+            const alertMessage = params.folder === "alerts" ? chat.alerts[0]?.messageId : null;
             return (
               <li key={chat.id}>
                 <LocaleLink
-                  href={`/admin/telegram/${chat.id}${chatQuery}`}
+                  href={`/admin/telegram/${chat.id}${chatQuery}${alertMessage ? `#m-${alertMessage}` : ""}`}
                   aria-current={selected ? "page" : undefined}
                   className={cn("flex items-center gap-3 rounded-xl p-3 transition-colors", selected ? "bg-muted" : "hover:bg-muted/60")}
                 >
-                  <ChatAvatar name={chat.name} />
+                  <ChatAvatar name={chat.name} active={isRecentlyActive(chat.lastInboundAt, now)} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="truncate font-semibold">{chat.name}</span>

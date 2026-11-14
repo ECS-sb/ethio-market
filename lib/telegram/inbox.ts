@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { FOLDERS, type Folder, type InboxParams } from "@/lib/telegram/folders";
+import { WITHDRAWAL_TAG } from "@/lib/telegram/profile";
 import { replyStats, startOfTodayInAddis } from "@/lib/telegram/stats";
 
 export const INBOX_LIMIT = 100;
@@ -20,6 +21,8 @@ function folderWhere(folder: Folder): Prisma.TelegramChatWhereInput {
       return { deals: { some: { kind: "SALE", status: { not: "CANCELLED" } } } };
     case "registrations":
       return { deals: { some: { kind: "REGISTRATION", status: { not: "CANCELLED" } } } };
+    case "withdrawals":
+      return { tags: { has: WITHDRAWAL_TAG } };
     case "receipts":
       return { messages: { some: { receipt: { is: { isReceipt: true } } } } };
     default:
@@ -60,10 +63,11 @@ export async function getInbox(params: InboxParams) {
         username: true,
         lastMessageAt: true,
         lastDirection: true,
+        lastInboundAt: true,
         connection: { select: { ownerName: true } },
         messages: { orderBy: [{ sentAt: "desc" }, { messageId: "desc" }], take: 1, select: { text: true, mediaType: true, direction: true, deletedAt: true } },
         deals: { orderBy: { dealAt: "desc" }, take: 1, select: { kind: true, status: true, amountEtb: true, item: true, paidToCompany: true } },
-        alerts: { where: { resolved: false }, orderBy: { createdAt: "desc" }, take: 1, select: { type: true, evidence: true } },
+        alerts: { where: { resolved: false }, orderBy: { createdAt: "desc" }, take: 1, select: { type: true, evidence: true, messageId: true } },
         _count: { select: { alerts: { where: { resolved: false } } } },
       },
     }),
