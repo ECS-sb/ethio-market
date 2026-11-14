@@ -49,7 +49,7 @@ export async function Inbox({
   const chatQuery = inboxQuery(params);
 
   return (
-    <aside className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-18rem)] lg:min-h-[24rem]">
+    <aside className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-var(--tg-offset,18rem))] lg:min-h-[24rem]">
       <div className="flex flex-col gap-2 border-b border-border p-3">
         {inbox.connections.length > 1 ? (
           <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">

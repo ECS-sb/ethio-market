@@ -1,13 +1,16 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ChatView } from "@/components/telegram/chat-view";
 import { FolderBar } from "@/components/telegram/folder-bar";
 import { Inbox } from "@/components/telegram/inbox";
 import { TelegramHeader } from "@/components/telegram/telegram-header";
+import { TelegramWorkspace } from "@/components/telegram/workspace";
 import { pageTitle } from "@/lib/i18n-server";
 import { requireAdmin } from "@/lib/session";
 import { inboxQuery, parseInboxParams } from "@/lib/telegram/folders";
 import { getInbox } from "@/lib/telegram/inbox";
+import { readLayoutPrefs } from "@/lib/telegram/layout-prefs";
 import { getTelegramChat } from "@/lib/telegram/queries";
 
 export const generateMetadata = pageTitle("Telegram chat");
@@ -25,6 +28,8 @@ export default async function AdminTelegramChatPage({
   await requireAdmin();
   const { id } = await params;
   const inboxParams = parseInboxParams(await searchParams);
+  const store = await cookies();
+  const prefs = readLayoutPrefs((name) => store.get(name)?.value);
   const now = new Date();
   const [chat, inbox] = await Promise.all([getTelegramChat(id), getInbox(inboxParams)]);
   if (!chat) notFound();
@@ -33,16 +38,15 @@ export default async function AdminTelegramChatPage({
     <>
       <AutoRefresh intervalMs={20000} />
       {/* በስልክ ላይ ቻቱ ብቻ ይታያል፤ ዝርዝሩ በ"ተመለስ" ቀስት ይመጣል። */}
-      <div className="hidden flex-col gap-4 lg:flex">
-        <TelegramHeader inbox={inbox} />
-        <FolderBar inbox={inbox} params={inboxParams} basePath={`/admin/telegram/${id}`} />
-      </div>
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[22rem_1fr]">
-        <div className="hidden min-w-0 lg:block">
-          <Inbox inbox={inbox} params={inboxParams} basePath={`/admin/telegram/${id}`} selectedId={id} now={now} />
-        </div>
-        <ChatView chat={chat} backHref={`/admin/telegram${inboxQuery(inboxParams)}`} now={now} />
-      </div>
+      <TelegramWorkspace
+        mode="chat"
+        initialStatsOpen={prefs.statsOpen}
+        initialListWidth={prefs.listWidth}
+        stats={<TelegramHeader inbox={inbox} />}
+        folders={<FolderBar inbox={inbox} params={inboxParams} basePath={`/admin/telegram/${id}`} />}
+        list={<Inbox inbox={inbox} params={inboxParams} basePath={`/admin/telegram/${id}`} selectedId={id} now={now} />}
+        main={<ChatView chat={chat} backHref={`/admin/telegram${inboxQuery(inboxParams)}`} now={now} />}
+      />
     </>
   );
 }

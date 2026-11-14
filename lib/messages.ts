@@ -683,6 +683,14 @@ export const am = {
   "Copy {item}": "{item} ኮፒ አድርግ",
   "Copied": "ኮፒ ተደርጓል",
   "Couldn't copy. Select the text and copy it yourself.": "ኮፒ ማድረግ አልተቻለም። ጽሑፉን መርጠው ራስዎ ኮፒ ያድርጉ።",
+
+  // ---- የገጹ አቀማመጥ (ማጥበብ/ማስፋት)
+  "Collapse menu": "ምናሌውን አጥብ",
+  "Expand menu": "ምናሌውን አስፋ",
+  "Hide analytics": "ቁጥሮቹን ደብቅ",
+  "Show analytics": "ቁጥሮቹን አሳይ",
+  "Resize the chat list": "የቻቶቹን ዝርዝር ስፋት ቀይር",
+  "Drag to resize. Double-click to reset.": "ስፋቱን ለመቀየር ይጎትቱ። ወደ ነበረበት ለመመለስ ሁለቴ ይጫኑ።",
 } as const;
 
 export type MessageKey = keyof typeof am;

@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { LocaleLink, useT } from "@/components/i18n-provider";
+import { useSidebarCompact } from "@/components/sidebar-layout";
 import { stripLocale } from "@/lib/i18n";
 import type { MessageKey } from "@/lib/messages";
 import { cn } from "@/lib/utils";
@@ -68,12 +69,14 @@ const groups: Record<"user" | "admin", Group[]> = {
 export function DashboardNav({ area }: { area: keyof typeof groups }) {
   const t = useT();
   const pathname = stripLocale(usePathname());
+  // ምናሌው ሲጠብ (በኮምፒውተር ስክሪን) አዶዎቹ ብቻ ይታያሉ፤ ስሙ በtitle እና ለስክሪን አንባቢ ይቀራል።
+  const compact = useSidebarCompact();
 
   return (
     <nav aria-label={t("Dashboard")} className="flex gap-4 overflow-x-auto [scrollbar-width:none] lg:flex-col">
       {groups[area].map((group) => (
         <div key={group.title} className="flex shrink-0 items-center gap-2 lg:flex-col lg:items-stretch">
-          <p className="hidden px-4 pt-2 text-xs font-semibold text-muted-foreground lg:block">{t(group.title)}</p>
+          <p className={cn("hidden px-4 pt-2 text-xs font-semibold text-muted-foreground", compact ? "lg:sr-only" : "lg:block")}>{t(group.title)}</p>
           {group.items.map((item) => {
             const hasSubpages = item.href === "/dashboard/messages" || item.href === "/admin/telegram";
             // ንዑስ ገጹ የራሱ ሊንክ ካለው (ለምሳሌ /admin/telegram/sales) የወላጁ ሊንክ አይበራም።
@@ -86,13 +89,15 @@ export function DashboardNav({ area }: { area: keyof typeof groups }) {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                title={compact ? t(item.label) : undefined}
                 className={cn(
                   "flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-sm transition-colors",
+                  compact && "lg:justify-center lg:px-0",
                   active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <item.icon className="size-4" />
-                {t(item.label)}
+                <item.icon className="size-4 shrink-0" />
+                <span className={cn(compact && "lg:sr-only")}>{t(item.label)}</span>
               </LocaleLink>
             );
           })}

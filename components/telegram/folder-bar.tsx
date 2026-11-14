@@ -28,11 +28,14 @@ const folderIcons: Record<Folder, LucideIcon> = {
   receipts: ReceiptIcon,
 };
 
-/** ከቁጥሮቹ ስር ሙሉውን ስፋት የሚይዝ የፎልደሮች መስመር፤ በስልክ ወደ ጎን ይንሸራተታል፣ በጠባብ ኮምፒውተር ስክሪን ወደ ቀጣይ መስመር ይወርዳል። */
+/**
+ * ከቁጥሮቹ ስር ያለው የፎልደሮች መስመር፤ ሁልጊዜ በአንድ መስመር ነው። ትንሽ ጽሑፍ ነው፤ አዶዎቹ በሰፊ ስክሪን ብቻ ይታያሉ።
+ * ቦታው ካልበቃ (ለምሳሌ በስልክ) ወደ ጎን ይንሸራተታል።
+ */
 export async function FolderBar({ inbox, params, basePath }: { inbox: Inbox; params: InboxParams; basePath: string }) {
   const t = await getT();
   return (
-    <nav aria-label={t("Folders")} className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none] lg:flex-wrap">
+    <nav aria-label={t("Folders")} className="flex min-w-0 flex-nowrap gap-1 overflow-x-auto [scrollbar-width:none]">
       {FOLDERS.map((folder) => {
         const Icon = folderIcons[folder];
         const active = params.folder === folder;
@@ -41,14 +44,15 @@ export async function FolderBar({ inbox, params, basePath }: { inbox: Inbox; par
             key={folder}
             href={`${basePath}${inboxQuery({ ...params, folder })}`}
             aria-current={active ? "page" : undefined}
+            title={t(folderLabels[folder])}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-colors",
+              "flex shrink-0 items-center gap-1 rounded-xl px-2 py-1.5 text-[11px] leading-none font-medium transition-colors",
               active ? "bg-primary text-primary-foreground" : "bg-card/70 text-muted-foreground ring-1 ring-foreground/10 hover:text-foreground"
             )}
           >
-            <Icon className="size-3.5" />
+            <Icon className="hidden size-3 2xl:block" />
             {t(folderLabels[folder])}
-            <span className={cn("rounded-full px-1.5 text-[11px]", active ? "bg-primary-foreground/15" : "bg-muted")}>{inbox.counts[folder]}</span>
+            <span className={cn("rounded-full px-1 py-0.5 text-[10px]", active ? "bg-primary-foreground/15" : "bg-muted")}>{inbox.counts[folder]}</span>
           </LocaleLink>
         );
       })}

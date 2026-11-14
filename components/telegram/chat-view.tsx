@@ -138,7 +138,7 @@ export async function ChatView({ chat, backHref, now }: { chat: ChatData; backHr
   return (
     <section
       aria-label={t("Chat with {name}", { name: chat.name })}
-      className="flex h-[calc(100dvh-9rem)] min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-18rem)] lg:min-h-[24rem]"
+      className="flex h-[calc(100dvh-9rem)] min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-var(--tg-offset,18rem))] lg:min-h-[24rem]"
     >
       <header className="flex items-center gap-3 border-b border-border p-4">
         <LocaleLink href={backHref} aria-label={t("Back to chats")} className="text-muted-foreground hover:text-foreground lg:hidden">
