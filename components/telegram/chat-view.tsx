@@ -81,7 +81,7 @@ function MessageBubble({ t, message }: { t: T; message: Message }) {
       <div
         className={cn(
           "max-w-[85%] rounded-xl px-3 py-2 text-sm break-words whitespace-pre-line sm:max-w-[75%]",
-          outgoing ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+          outgoing ? "bg-[var(--tg-bubble-out,var(--primary))] text-white" : "bg-secondary text-secondary-foreground",
           message.flagged && "ring-2 ring-destructive",
           message.deletedAt && "opacity-60"
         )}
@@ -138,7 +138,7 @@ export async function ChatView({ chat, backHref, now }: { chat: ChatData; backHr
   return (
     <section
       aria-label={t("Chat with {name}", { name: chat.name })}
-      className="flex h-[calc(100dvh-9rem)] min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-var(--tg-offset,18rem))] lg:min-h-[24rem]"
+      className="flex h-[calc(100dvh-9rem)] min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 lg:h-[calc(100dvh-var(--tg-offset,18rem))] lg:min-h-[24rem]"
     >
       <header className="flex items-center gap-3 border-b border-border p-4">
         <LocaleLink href={backHref} aria-label={t("Back to chats")} className="text-muted-foreground hover:text-foreground lg:hidden">
@@ -259,14 +259,14 @@ export async function ChatView({ chat, backHref, now }: { chat: ChatData; backHr
       ) : null}
 
       {/* flex-col-reverse፦ ገጹ ሲከፈት በቀጥታ የመጨረሻዎቹ መልዕክቶች ላይ ይቆማል። */}
-      <div className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto bg-background">
         <div className="flex flex-col gap-2 p-4">
           {chat.truncated ? (
             <p className="self-center text-xs text-muted-foreground">{t("Showing the latest {count} messages.", { count: TELEGRAM_CHAT_PAGE })}</p>
           ) : null}
           {items.map((item) =>
             item.kind === "day" ? (
-              <p key={`day-${item.key}`} className="my-2 self-center rounded-xl bg-muted px-3 py-1 text-xs text-muted-foreground">
+              <p key={`day-${item.key}`} className="my-2 self-center rounded-xl bg-[var(--tg-service,var(--muted))] px-3 py-1 text-xs font-medium text-foreground/90">
                 {dayLabel(item.date)}
               </p>
             ) : (

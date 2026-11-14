@@ -49,7 +49,7 @@ export async function Inbox({
   const chatQuery = inboxQuery(params);
 
   return (
-    <aside className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-var(--tg-offset,18rem))] lg:min-h-[24rem]">
+    <aside className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10 lg:h-[calc(100dvh-var(--tg-offset,18rem))] lg:min-h-[24rem]">
       <div className="flex flex-col gap-2 border-b border-border p-3">
         {inbox.connections.length > 1 ? (
           <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
@@ -70,7 +70,14 @@ export async function Inbox({
         ) : null}
         <form action={localePath(locale, basePath)} className="relative" role="search">
           <SearchIcon className="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input name="q" defaultValue={params.q} placeholder={t("Search chats")} aria-label={t("Search chats")} className="ps-10" autoComplete="off" />
+          <Input
+            name="q"
+            defaultValue={params.q}
+            placeholder={t("Search chats")}
+            aria-label={t("Search chats")}
+            className="h-10 border-transparent bg-muted ps-10 dark:bg-muted"
+            autoComplete="off"
+          />
           {params.folder !== "all" ? <input type="hidden" name="folder" value={params.folder} /> : null}
           {params.account ? <input type="hidden" name="account" value={params.account} /> : null}
         </form>
@@ -90,19 +97,28 @@ export async function Inbox({
                 <LocaleLink
                   href={`/admin/telegram/${chat.id}${chatQuery}${alertMessage ? `#m-${alertMessage}` : ""}`}
                   aria-current={selected ? "page" : undefined}
-                  className={cn("flex items-center gap-3 rounded-xl p-3 transition-colors", selected ? "bg-muted" : "hover:bg-muted/60")}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl p-3 transition-colors",
+                    selected ? "bg-[var(--tg-row-active,var(--muted))] text-white" : "hover:bg-accent"
+                  )}
                 >
                   <ChatAvatar name={chat.name} active={isRecentlyActive(chat.lastInboundAt, now)} />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="truncate font-semibold">{chat.name}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{chatListTime(chat.lastMessageAt, now)}</span>
+                      <span className={cn("shrink-0 text-xs", selected ? "text-white/70" : "text-muted-foreground")}>{chatListTime(chat.lastMessageAt, now)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span
                         className={cn(
                           "truncate text-sm",
-                          line.tone === "alert" ? "text-destructive" : line.tone === "deal" ? "text-foreground" : "text-muted-foreground"
+                          selected
+                            ? "text-white/75"
+                            : line.tone === "alert"
+                              ? "text-destructive"
+                              : line.tone === "deal"
+                                ? "text-[var(--tg-link,var(--foreground))]"
+                                : "text-muted-foreground"
                         )}
                       >
                         {line.text}

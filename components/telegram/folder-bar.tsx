@@ -47,7 +47,7 @@ export async function FolderBar({ inbox, params, basePath }: { inbox: Inbox; par
             title={t(folderLabels[folder])}
             className={cn(
               "flex shrink-0 items-center gap-1 rounded-xl px-2 py-1.5 text-[11px] leading-none font-medium transition-colors",
-              active ? "bg-primary text-primary-foreground" : "bg-card/70 text-muted-foreground ring-1 ring-foreground/10 hover:text-foreground"
+              active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground ring-1 ring-foreground/10 hover:bg-accent hover:text-foreground"
             )}
           >
             <Icon className="hidden size-3 2xl:block" />

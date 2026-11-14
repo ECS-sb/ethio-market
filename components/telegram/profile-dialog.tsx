@@ -6,6 +6,7 @@ import { CopyButton } from "@/components/telegram/copy-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import type { CustomerProfile, ProfileAccount } from "@/lib/telegram/profile";
+import { telegramTheme } from "@/lib/telegram/theme";
 
 type Stats = { firstSeen: string; messages: number; deals: number; paid: string | null };
 
@@ -68,7 +69,8 @@ export function ProfileDialog({
       >
         <EyeIcon />
       </DialogTrigger>
-      <DialogContent showCloseButton={false} className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
+      {/* መስኮቱ ከገጹ ውጭ (portal) ስለሚከፈት የቴሌግራም ቀለሞችን በራሱ ይወስዳል። */}
+      <DialogContent showCloseButton={false} style={telegramTheme} className="max-h-[85dvh] overflow-y-auto sm:max-w-md">
         <div className="flex items-center justify-between gap-4">
           <DialogTitle className="truncate">{name}</DialogTitle>
           <DialogClose render={<Button variant="ghost" size="icon-sm" aria-label={t("Close")} />}>

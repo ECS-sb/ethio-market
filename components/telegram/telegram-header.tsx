@@ -22,9 +22,9 @@ export async function TelegramHeader({ inbox }: { inbox: Inbox }) {
       <h1 className="sr-only">{t("Telegram monitoring")}</h1>
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
         {stats.map((stat) => (
-          <div key={stat.label} className="flex flex-col rounded-xl bg-card/70 px-4 py-3 ring-1 ring-foreground/10">
+          <div key={stat.label} className="flex flex-col rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/10">
             <dt className="order-2 text-xs text-muted-foreground">{stat.label}</dt>
-            <dd className={cn("order-1 text-xl font-semibold", stat.alert ? "text-destructive" : "text-primary")}>{stat.value}</dd>
+            <dd className={cn("order-1 text-xl font-semibold", stat.alert ? "text-destructive" : "text-[var(--tg-link,var(--primary))]")}>{stat.value}</dd>
           </div>
         ))}
       </dl>

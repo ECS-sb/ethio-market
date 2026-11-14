@@ -5,6 +5,7 @@ import { ChartColumnIcon, ChevronUpIcon } from "lucide-react";
 import { useT } from "@/components/i18n-provider";
 import { Button } from "@/components/ui/button";
 import { clampListWidth, LIST_COOKIE, LIST_DEFAULT, LIST_MAX, LIST_MIN, saveLayoutPref, STATS_COOKIE } from "@/lib/telegram/layout-prefs";
+import { telegramTheme } from "@/lib/telegram/theme";
 import { cn } from "@/lib/utils";
 
 /**
@@ -52,7 +53,7 @@ export function TelegramWorkspace({
   return (
     <div
       className="flex min-w-0 flex-col gap-4"
-      style={{ "--tg-offset": statsOpen ? "17rem" : "10.5rem", "--tg-list": `${listWidth}px` } as CSSProperties}
+      style={{ ...telegramTheme, "--tg-offset": statsOpen ? "17rem" : "10.5rem", "--tg-list": `${listWidth}px` } as CSSProperties}
     >
       <div className={cn("flex-col gap-4", mode === "chat" ? "hidden lg:flex" : "flex")}>
         {statsOpen ? stats : null}

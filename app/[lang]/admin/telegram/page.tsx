@@ -33,7 +33,7 @@ export default async function AdminTelegramPage({ searchParams }: { searchParams
         folders={<FolderBar inbox={inbox} params={params} basePath="/admin/telegram" />}
         list={<Inbox inbox={inbox} params={params} basePath="/admin/telegram" selectedId={null} now={now} />}
         main={
-          <div className="hidden min-h-[24rem] flex-col items-center justify-center gap-4 rounded-xl bg-card/70 text-sm text-muted-foreground ring-1 ring-foreground/10 lg:flex lg:h-[calc(100dvh-var(--tg-offset,18rem))]">
+          <div className="hidden min-h-[24rem] flex-col items-center justify-center gap-4 rounded-xl bg-background text-sm text-muted-foreground ring-1 ring-foreground/10 lg:flex lg:h-[calc(100dvh-var(--tg-offset,18rem))]">
             <MessagesSquareIcon className="size-10 text-primary/60" />
             {t("Select a chat to read it.")}
           </div>
