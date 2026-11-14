@@ -9,6 +9,7 @@ import {
   ListIcon,
   MessageCircleIcon,
   ReceiptIcon,
+  SendIcon,
   SettingsIcon,
   ShoppingBagIcon,
   StoreIcon,
@@ -56,6 +57,7 @@ const groups: Record<"user" | "admin", Group[]> = {
         { href: "/admin/orders", label: "Orders", icon: ReceiptIcon },
         { href: "/admin/users", label: "Users", icon: UsersIcon },
         { href: "/admin/reports", label: "Reports", icon: FlagIcon },
+        { href: "/admin/telegram", label: "Telegram", icon: SendIcon },
       ],
     },
   ],
@@ -71,7 +73,8 @@ export function DashboardNav({ area }: { area: keyof typeof groups }) {
         <div key={group.title} className="flex shrink-0 items-center gap-2 lg:flex-col lg:items-stretch">
           <p className="hidden px-4 pt-2 text-xs font-semibold text-muted-foreground lg:block">{t(group.title)}</p>
           {group.items.map((item) => {
-            const active = pathname === item.href || (item.href === "/dashboard/messages" && pathname.startsWith(item.href));
+            const hasSubpages = item.href === "/dashboard/messages" || item.href === "/admin/telegram";
+            const active = pathname === item.href || (hasSubpages && pathname.startsWith(item.href));
             return (
               <LocaleLink
                 key={item.href}

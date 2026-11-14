@@ -45,15 +45,15 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  sessions          Session[]
-  accounts          Account[]
-  listings          Listing[]
-  offers            Offer[]
-  purchases         Order[]        @relation("OrderBuyer")
-  sales             Order[]        @relation("OrderSeller")
+  sessions           Session[]
+  accounts           Account[]
+  listings           Listing[]
+  offers             Offer[]
+  purchases          Order[]        @relation("OrderBuyer")
+  sales              Order[]        @relation("OrderSeller")
   buyerConversations Conversation[] @relation("ConversationBuyer")
-  messages          Message[]
-  reports           Report[]
+  messages           Message[]
+  reports            Report[]
 
   @@map("user")
 }
@@ -252,4 +252,111 @@ model ContactMessage {
 
   @@index([resolved])
   @@map("contact_message")
+}
+
+// ---- Telegram Business ክትትል
+// ቦቱ ከድርጅቱ የቴሌግራም አካውንቶች ጋር በTelegram Business ይገናኛል፤ የሚመጡት መልዕክቶች እዚህ ይቀመጣሉ።
+
+enum TelegramDirection {
+  IN
+  OUT
+}
+
+enum TelegramAlertType {
+  PHONE_NUMBER
+  TELEGRAM_CONTACT
+  WHATSAPP
+  BANK_ACCOUNT
+  SUSPICIOUS_PHRASE
+  DELETED_MESSAGE
+}
+
+enum TelegramAlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+/// አንድ የድርጅት የቴሌግራም አካውንት ከቦቱ ጋር ያለው ግንኙነት። id የቴሌግራሙ business_connection_id ነው።
+model TelegramConnection {
+  id            String   @id
+  ownerId       BigInt
+  ownerChatId   BigInt
+  ownerName     String
+  ownerUsername String?
+  canReply      Boolean  @default(false)
+  isEnabled     Boolean  @default(true)
+  connectedAt   DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  chats TelegramChat[]
+
+  @@map("telegram_connection")
+}
+
+/// ከአንድ ደንበኛ ጋር ያለ ቻት። chatId የቴሌግራሙ የደንበኛ መለያ ነው።
+model TelegramChat {
+  id             String             @id @default(cuid())
+  connectionId   String
+  connection     TelegramConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  chatId         BigInt
+  name           String
+  username       String?
+  lastMessageAt  DateTime
+  lastDirection  TelegramDirection
+  lastInboundAt  DateTime?
+  lastOutboundAt DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  messages TelegramMessage[]
+  alerts   TelegramAlert[]
+
+  @@unique([connectionId, chatId])
+  @@index([lastMessageAt])
+  @@index([lastDirection])
+  @@map("telegram_chat")
+}
+
+model TelegramMessage {
+  id           String            @id @default(cuid())
+  chatId       String
+  chat         TelegramChat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  messageId    Int
+  direction    TelegramDirection
+  senderName   String
+  viaBot       Boolean           @default(false)
+  text         String            @default("")
+  mediaType    String?
+  fileId       String?
+  sentAt       DateTime
+  editedAt     DateTime?
+  previousText String?
+  deletedAt    DateTime?
+  createdAt    DateTime          @default(now())
+
+  alerts TelegramAlert[]
+
+  @@unique([chatId, messageId])
+  @@index([sentAt])
+  @@map("telegram_message")
+}
+
+model TelegramAlert {
+  id        String                @id @default(cuid())
+  chatId    String
+  chat      TelegramChat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  messageId String?
+  message   TelegramMessage?      @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  type      TelegramAlertType
+  severity  TelegramAlertSeverity
+  evidence  String
+  resolved  Boolean               @default(false)
+  createdAt DateTime              @default(now())
+
+  @@unique([messageId, type, evidence])
+  @@index([resolved, createdAt])
+  @@index([chatId])
+  @@map("telegram_alert")
 }

@@ -184,3 +184,7 @@ export function formatCount(value: number): string {
 export function formatDate(value: Date | string): string {
   return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeZone: "Africa/Addis_Ababa" }).format(new Date(value));
 }
+
+export function formatDateTime(value: Date | string): string {
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Addis_Ababa" }).format(new Date(value));
+}

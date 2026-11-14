@@ -220,6 +220,9 @@ const releaseOrderImpl = adminAction("Order completed.", market.releaseOrder);
 const cancelOrderImpl = adminAction("Order cancelled.", market.cancelOrder);
 const resolveReportImpl = adminAction("Resolved.", market.resolveReport);
 const resolveContactImpl = adminAction("Resolved.", market.resolveContactMessage);
+const resolveTelegramAlertImpl = adminAction("Resolved.", async (_actor, target) => {
+  await db.telegramAlert.update({ where: { id: target }, data: { resolved: true } });
+});
 
 export async function approveListingAction(data: FormData) {
   return approveListingImpl(data);
@@ -238,6 +241,9 @@ export async function resolveReportAction(data: FormData) {
 }
 export async function resolveContactAction(data: FormData) {
   return resolveContactImpl(data);
+}
+export async function resolveTelegramAlertAction(data: FormData) {
+  return resolveTelegramAlertImpl(data);
 }
 
 export async function rejectListingAction(data: FormData): Promise<ActionResult> {
