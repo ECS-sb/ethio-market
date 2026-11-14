@@ -1,8 +1,12 @@
 import { timingSafeEqual } from "node:crypto";
 import { after, type NextRequest } from "next/server";
+import { analyzeIncomingReceipts } from "@/lib/telegram/analyze";
 import { handleBusinessUpdate } from "@/lib/telegram/ingest";
 import { handleBotChat, sendAlertNotifications } from "@/lib/telegram/report";
 import type { TgUpdate } from "@/lib/telegram/types";
+
+/** ደረሰኝ ማንበብና ቻት መተንተን ከምላሹ በኋላ (after) ስለሚሰሩ ጊዜ ያስፈልጋቸዋል። */
+export const maxDuration = 300;
 
 function sameSecret(given: string, expected: string): boolean {
   const a = Buffer.from(given);
@@ -24,8 +28,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const alerts = await handleBusinessUpdate(update);
+    const { alerts, receiptMessageIds } = await handleBusinessUpdate(update);
     if (alerts.length > 0) after(() => sendAlertNotifications(alerts));
+    if (receiptMessageIds.length > 0) {
+      after(async () => {
+        const receiptAlerts = await analyzeIncomingReceipts(receiptMessageIds);
+        if (receiptAlerts.length > 0) await sendAlertNotifications(receiptAlerts);
+      });
+    }
     if (update.message) {
       const message = update.message;
       after(() => handleBotChat(message));

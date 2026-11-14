@@ -4,17 +4,38 @@ import { ActionButton } from "@/components/action-form";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { LocaleLink } from "@/components/i18n-provider";
 import { Badge } from "@/components/ui/badge";
-import { resolveTelegramAlertAction } from "@/lib/actions";
-import { formatDateTime } from "@/lib/catalog";
+import { analyzeTelegramChatAction, resolveTelegramAlertAction } from "@/lib/actions";
+import { formatDateTime, formatPrice } from "@/lib/catalog";
+import type { T } from "@/lib/i18n";
 import { getT, pageTitle } from "@/lib/i18n-server";
 import { requireAdmin } from "@/lib/session";
-import { alertLabels, evidenceText, mediaLabels, severityLabels } from "@/lib/telegram/labels";
+import { alertLabels, dealKindLabels, dealStatusLabels, evidenceText, mediaLabels, paymentLabel, severityLabels } from "@/lib/telegram/labels";
 import { getTelegramChat, TELEGRAM_CHAT_PAGE } from "@/lib/telegram/queries";
 import { cn } from "@/lib/utils";
 
 export const generateMetadata = pageTitle("Telegram chat");
 
+/** "ይህንን ቻት ተንትን" አዝራሩ Claude እስኪጨርስ ይጠብቃል። */
+export const maxDuration = 300;
+
 const severityVariant = { HIGH: "destructive", MEDIUM: "default", LOW: "outline" } as const;
+
+type ReceiptView = {
+  isReceipt: boolean;
+  provider: string | null;
+  amountEtb: number | null;
+  recipientName: string | null;
+  recipientAccount: string | null;
+  transactionId: string | null;
+  toCompany: boolean | null;
+};
+
+function receiptLine(t: T, receipt: ReceiptView): string {
+  if (!receipt.isReceipt) return t("Not a payment receipt");
+  const recipient = [receipt.recipientName, receipt.recipientAccount].filter(Boolean).join(" ");
+  const parts = [receipt.provider, receipt.amountEtb === null ? null : formatPrice(t, Math.round(receipt.amountEtb)), recipient ? `→ ${recipient}` : null, receipt.transactionId];
+  return `${t("Receipt")}: ${parts.filter(Boolean).join(" · ")}`;
+}
 
 export default async function AdminTelegramChatPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getT();
@@ -50,6 +71,43 @@ export default async function AdminTelegramChatPage({ params }: { params: Promis
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {chat.aiEnabled || chat.aiSummary ? (
+        <section className="flex flex-col gap-4 rounded-xl bg-card/70 p-6 text-sm ring-1 ring-foreground/10">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-base font-semibold">{t("AI summary")}</h2>
+              {chat.analyzedAt ? (
+                <span className="text-xs text-muted-foreground">{t("Analyzed {date}", { date: formatDateTime(chat.analyzedAt) })}</span>
+              ) : null}
+            </div>
+            {chat.aiEnabled ? (
+              <ActionButton action={analyzeTelegramChatAction} id={chat.id} variant="outline">
+                {t("Analyze this chat")}
+              </ActionButton>
+            ) : null}
+          </div>
+          {chat.aiSummary ? <p className="break-words whitespace-pre-line">{chat.aiSummary}</p> : null}
+          {chat.deals.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {chat.deals.map((deal) => (
+                <li key={deal.id} className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">{t(dealKindLabels[deal.kind])}</Badge>
+                  <span className="font-medium break-words">{deal.item}</span>
+                  {deal.amountEtb !== null ? <span>· {formatPrice(t, deal.amountEtb)}</span> : null}
+                  <Badge variant="secondary">{t(dealStatusLabels[deal.status])}</Badge>
+                  {deal.status === "PAID" || deal.status === "DELIVERED" ? (
+                    <Badge variant={deal.paidToCompany === false ? "destructive" : deal.paidToCompany ? "default" : "outline"}>
+                      {t(paymentLabel(deal.paidToCompany))}
+                    </Badge>
+                  ) : null}
+                  {deal.note ? <span className="text-muted-foreground">· {deal.note}</span> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
       ) : null}
 
       <section
@@ -96,6 +154,21 @@ export default async function AdminTelegramChatPage({ params }: { params: Promis
                   {media ? <span className="block text-xs font-semibold">[{media}]</span> : null}
                   {message.text}
                 </div>
+                {message.receipt ? (
+                  <p
+                    className={cn(
+                      "flex flex-wrap items-center gap-2 text-xs break-words",
+                      message.receipt.isReceipt && message.receipt.toCompany === false ? "text-destructive" : "text-muted-foreground"
+                    )}
+                  >
+                    <span dir="auto">{receiptLine(t, message.receipt)}</span>
+                    {message.receipt.isReceipt ? (
+                      <Badge variant={message.receipt.toCompany === false ? "destructive" : message.receipt.toCompany ? "default" : "outline"}>
+                        {t(paymentLabel(message.receipt.toCompany))}
+                      </Badge>
+                    ) : null}
+                  </p>
+                ) : null}
                 {message.previousText !== null ? (
                   <p className="text-xs break-words whitespace-pre-line text-muted-foreground">
                     {t("Before edit:")} {message.previousText}

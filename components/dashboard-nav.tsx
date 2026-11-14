@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import {
+  BadgeDollarSignIcon,
   FlagIcon,
   HandCoinsIcon,
   LayoutDashboardIcon,
@@ -58,6 +59,7 @@ const groups: Record<"user" | "admin", Group[]> = {
         { href: "/admin/users", label: "Users", icon: UsersIcon },
         { href: "/admin/reports", label: "Reports", icon: FlagIcon },
         { href: "/admin/telegram", label: "Telegram", icon: SendIcon },
+        { href: "/admin/telegram/sales", label: "Telegram sales", icon: BadgeDollarSignIcon },
       ],
     },
   ],
@@ -74,7 +76,11 @@ export function DashboardNav({ area }: { area: keyof typeof groups }) {
           <p className="hidden px-4 pt-2 text-xs font-semibold text-muted-foreground lg:block">{t(group.title)}</p>
           {group.items.map((item) => {
             const hasSubpages = item.href === "/dashboard/messages" || item.href === "/admin/telegram";
-            const active = pathname === item.href || (hasSubpages && pathname.startsWith(item.href));
+            // ንዑስ ገጹ የራሱ ሊንክ ካለው (ለምሳሌ /admin/telegram/sales) የወላጁ ሊንክ አይበራም።
+            const ownedByChild = group.items.some(
+              (other) => other.href.startsWith(`${item.href}/`) && (pathname === other.href || pathname.startsWith(`${other.href}/`))
+            );
+            const active = pathname === item.href || (hasSubpages && pathname.startsWith(`${item.href}/`) && !ownedByChild);
             return (
               <LocaleLink
                 key={item.href}

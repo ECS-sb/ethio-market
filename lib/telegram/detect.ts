@@ -1,7 +1,16 @@
 // ሰራተኛ ለደንበኛ የላከውን መልዕክት በመመርመር ሽያጩን ወደ ግል የመውሰድ ምልክቶችን ይለያል።
 // ምንም database ወይም network አይጠቀምም፤ ስለዚህ ብቻውን መሞከር ይቻላል።
 
-export type AlertType = "PHONE_NUMBER" | "TELEGRAM_CONTACT" | "WHATSAPP" | "BANK_ACCOUNT" | "SUSPICIOUS_PHRASE" | "DELETED_MESSAGE";
+export type AlertType =
+  | "PHONE_NUMBER"
+  | "TELEGRAM_CONTACT"
+  | "WHATSAPP"
+  | "BANK_ACCOUNT"
+  | "SUSPICIOUS_PHRASE"
+  | "DELETED_MESSAGE"
+  | "PAYMENT_TO_OTHER_ACCOUNT"
+  | "DUPLICATE_RECEIPT"
+  | "AI_SUSPICION";
 export type AlertSeverity = "LOW" | "MEDIUM" | "HIGH";
 export type Finding = { type: AlertType; severity: AlertSeverity; evidence: string };
 

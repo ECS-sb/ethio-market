@@ -10,6 +10,9 @@ import { optimizeScreenshot } from "@/lib/images";
 import * as market from "@/lib/marketplace";
 import type { MessageKey } from "@/lib/messages";
 import { requestLocale, requireAdmin, requireUser } from "@/lib/session";
+import { aiEnabled } from "@/lib/telegram/ai";
+import { analyzeChat, analyzePending } from "@/lib/telegram/analyze";
+import { sendAlertNotifications } from "@/lib/telegram/report";
 
 export type ActionResult = { ok: boolean; message: MessageKey; code?: string; id?: string };
 
@@ -244,6 +247,27 @@ export async function resolveContactAction(data: FormData) {
 }
 export async function resolveTelegramAlertAction(data: FormData) {
   return resolveTelegramAlertImpl(data);
+}
+
+const AI_NOT_SET_UP: ActionResult = { ok: false, message: "AI analysis is not set up yet." };
+
+export async function analyzeTelegramChatAction(data: FormData): Promise<ActionResult> {
+  await requireAdmin();
+  if (!aiEnabled()) return AI_NOT_SET_UP;
+  const parsed = id.safeParse(field(data, "id"));
+  if (!parsed.success) return INVALID;
+  return run("Analysis finished.", async () => {
+    await analyzeChat(parsed.data);
+  });
+}
+
+export async function analyzePendingTelegramAction(): Promise<ActionResult> {
+  await requireAdmin();
+  if (!aiEnabled()) return AI_NOT_SET_UP;
+  return run("Analysis finished.", async () => {
+    const result = await analyzePending({ receipts: 10, chats: 8 });
+    if (result.alerts.length > 0) await sendAlertNotifications(result.alerts);
+  });
 }
 
 export async function rejectListingAction(data: FormData): Promise<ActionResult> {

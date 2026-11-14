@@ -1,4 +1,7 @@
 {
   "regions": ["lhr1"],
-  "crons": [{ "path": "/api/telegram/report", "schedule": "0 18 * * *" }]
+  "crons": [
+    { "path": "/api/telegram/analyze", "schedule": "30 17 * * *" },
+    { "path": "/api/telegram/report", "schedule": "0 18 * * *" }
+  ]
 }

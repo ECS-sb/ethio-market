@@ -29,6 +29,29 @@ export function replyStats(messages: DirectedMessage[]) {
   };
 }
 
+export type DealLike = {
+  kind: "SALE" | "REGISTRATION";
+  status: "NEGOTIATING" | "AGREED" | "PAID" | "DELIVERED" | "CANCELLED";
+  amountEtb: number | null;
+  paidToCompany: boolean | null;
+};
+
+const CLOSED_STATUSES = new Set(["AGREED", "PAID", "DELIVERED"]);
+const PAID_STATUSES = new Set(["PAID", "DELIVERED"]);
+
+/** የተዘጉ ሽያጮች፣ ምዝገባዎች፣ ወደ ድርጅቱ (ወይም ገና ያልተረጋገጠ) የተከፈለ ብር። ወደ ሌላ ሂሳብ የተከፈለው አይደመርም። */
+export function summarizeDeals(deals: DealLike[]) {
+  const paid = deals.filter((deal) => PAID_STATUSES.has(deal.status));
+  return {
+    any: deals.length > 0,
+    sales: deals.filter((deal) => deal.kind === "SALE" && CLOSED_STATUSES.has(deal.status)).length,
+    registrations: deals.filter((deal) => deal.kind === "REGISTRATION" && CLOSED_STATUSES.has(deal.status)).length,
+    paidEtb: paid.filter((deal) => deal.paidToCompany !== false).reduce((sum, deal) => sum + (deal.amountEtb ?? 0), 0),
+    unverified: paid.filter((deal) => deal.paidToCompany === null).length,
+    otherAccount: deals.filter((deal) => deal.paidToCompany === false).length,
+  };
+}
+
 /** የአዲስ አበባ ሰዓት (UTC+3፣ የክረምት/የበጋ ለውጥ የለውም) የዛሬ መጀመሪያ። */
 export function startOfTodayInAddis(now = new Date()): Date {
   const offset = 3 * HOUR;

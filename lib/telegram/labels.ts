@@ -1,5 +1,6 @@
 import type { MessageKey } from "@/lib/messages";
 import type { AlertSeverity, AlertType } from "@/lib/telegram/detect";
+import type { DealLike } from "@/lib/telegram/stats";
 
 export const alertLabels: Record<AlertType, MessageKey> = {
   PHONE_NUMBER: "Phone number shared",
@@ -8,7 +9,28 @@ export const alertLabels: Record<AlertType, MessageKey> = {
   BANK_ACCOUNT: "Bank account number shared",
   SUSPICIOUS_PHRASE: "Suspicious phrase",
   DELETED_MESSAGE: "Messages deleted",
+  PAYMENT_TO_OTHER_ACCOUNT: "Payment to a non-company account",
+  DUPLICATE_RECEIPT: "Receipt used twice",
+  AI_SUSPICION: "AI: possible side deal",
 };
+
+export const dealKindLabels: Record<DealLike["kind"], MessageKey> = {
+  SALE: "Sale",
+  REGISTRATION: "Registration",
+};
+
+export const dealStatusLabels: Record<DealLike["status"], MessageKey> = {
+  NEGOTIATING: "Negotiating",
+  AGREED: "Agreed",
+  PAID: "Paid",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
+};
+
+/** ክፍያው ወደ የት እንደገባ፦ true ድርጅቱ፣ false ሌላ ሂሳብ፣ null አልተረጋገጠም። */
+export function paymentLabel(paidToCompany: boolean | null): MessageKey {
+  return paidToCompany === true ? "Company account" : paidToCompany === false ? "Other account" : "Not verified";
+}
 
 export const severityLabels: Record<AlertSeverity, MessageKey> = {
   HIGH: "High",

@@ -604,6 +604,43 @@ export const am = {
   "Open the chat": "ቻቱን ክፈት",
   "Your chat ID is {id}. Add it to TELEGRAM_OWNER_CHAT_IDS to receive reports and alerts.":
     "የእርስዎ chat ID {id} ነው። ሪፖርትና ማስጠንቀቂያ እንዲደርስዎ ወደ TELEGRAM_OWNER_CHAT_IDS ያስገቡት።",
+
+  // ---- Telegram ሽያጮች (በAI የተገኙ)
+  "Telegram sales": "የቴሌግራም ሽያጮች",
+  "AI analysis is not set up yet.": "የAI ትንተና ገና አልተዘጋጀም።",
+  "AI analysis is not set up yet. Add ANTHROPIC_API_KEY in Vercel, as described in docs/telegram-setup.md.":
+    "የAI ትንተና ገና አልተዘጋጀም። በdocs/telegram-setup.md እንደተገለጸው ANTHROPIC_API_KEY-ን በVercel ላይ ያስገቡ።",
+  "Analysis finished.": "ትንተናው ተጠናቋል።",
+  "Analyze pending chats ({count})": "ያልተተነተኑትን ተንትን ({count})",
+  "Analyze this chat": "ይህንን ቻት ተንትን",
+  "Sales today": "የዛሬ ሽያጮች",
+  "Paid today": "ዛሬ የተከፈለ",
+  "Registrations today": "የዛሬ ምዝገባዎች",
+  "Unverified payments (7 days)": "ያልተረጋገጡ ክፍያዎች (7 ቀን)",
+  "Paid to other accounts (7 days)": "ወደ ሌላ ሂሳብ የተከፈለ (7 ቀን)",
+  "Last 30 days": "ባለፉት 30 ቀናት",
+  "Found by AI from the chats ({model}). Check important sales in the chat itself.":
+    "ከቻቶቹ በAI የተገኙ ({model})። አስፈላጊ ሽያጮችን በቻቱ ውስጥ ያረጋግጡ።",
+  "No sales found yet.": "እስካሁን የተገኘ ሽያጭ የለም።",
+  "Sale": "ሽያጭ",
+  "Registration": "ምዝገባ",
+  "Negotiating": "በድርድር ላይ",
+  "Agreed": "ተስማምተዋል",
+  "Paid": "ተከፍሏል",
+  "Delivered": "ተላልፏል",
+  "Company account": "የድርጅቱ ሂሳብ",
+  "Other account": "ሌላ ሂሳብ",
+  "Not verified": "አልተረጋገጠም",
+  "AI summary": "የAI ማጠቃለያ",
+  "Analyzed {date}": "የተተነተነው፦ {date}",
+  "Receipt": "ደረሰኝ",
+  "Not a payment receipt": "የክፍያ ደረሰኝ አይደለም",
+  "Payment to a non-company account": "ወደ ድርጅቱ ያልሆነ ሂሳብ ተከፍሏል",
+  "Receipt used twice": "አንድ ደረሰኝ ሁለት ጊዜ ቀርቧል",
+  "AI: possible side deal": "AI፦ ሽሽጥ ሊሆን ይችላል",
+  "Sales: {count} · paid {amount} ETB": "ሽያጮች፦ {count} · የተከፈለ {amount} ብር",
+  "Course registrations: {count}": "የኮርስ ምዝገባዎች፦ {count}",
+  "Payments not yet verified: {count}": "ያልተረጋገጡ ክፍያዎች፦ {count}",
 } as const;
 
 export type MessageKey = keyof typeof am;

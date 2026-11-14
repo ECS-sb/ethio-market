@@ -4,7 +4,7 @@ import { createT, localePath, type Locale, type T } from "@/lib/i18n";
 import { escapeHtml, notifyOwners, ownerChatIds, sendMessage } from "@/lib/telegram/api";
 import type { NewAlert } from "@/lib/telegram/ingest";
 import { alertLabels, evidenceText } from "@/lib/telegram/labels";
-import { replyStats } from "@/lib/telegram/stats";
+import { replyStats, summarizeDeals } from "@/lib/telegram/stats";
 import type { TgMessage } from "@/lib/telegram/types";
 
 /** ሪፖርቶቹ በነባሪ በአማርኛ ይላካሉ፤ TELEGRAM_REPORT_LOCALE=en ከሆነ በእንግሊዝኛ። */
@@ -23,7 +23,7 @@ function link(url: string | null, label: string): string {
 
 export async function buildDailyReport(t: T, locale: Locale, now = new Date()): Promise<string> {
   const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const [connections, messages, newChats, waiting, alerts] = await Promise.all([
+  const [connections, messages, newChats, waiting, alerts, deals] = await Promise.all([
     db.telegramConnection.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, ownerName: true, ownerUsername: true, isEnabled: true } }),
     db.telegramMessage.findMany({
       where: { sentAt: { gte: since } },
@@ -36,6 +36,10 @@ export async function buildDailyReport(t: T, locale: Locale, now = new Date()): 
       where: { createdAt: { gte: since } },
       orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
       select: { type: true, evidence: true, severity: true, chat: { select: { name: true, connectionId: true } } },
+    }),
+    db.telegramDeal.findMany({
+      where: { dealAt: { gte: since } },
+      select: { kind: true, status: true, amountEtb: true, paidToCompany: true, chat: { select: { connectionId: true } } },
     }),
   ]);
 
@@ -62,6 +66,14 @@ export async function buildDailyReport(t: T, locale: Locale, now = new Date()): 
       escapeHtml(t("Waiting for a reply now: {count}", { count: count(waiting) })),
       escapeHtml(t("New alerts: {count}", { count: alerts.filter((alert) => alert.chat.connectionId === connection.id).length }))
     );
+    const sales = summarizeDeals(deals.filter((deal) => deal.chat.connectionId === connection.id));
+    if (sales.any) {
+      lines.push(
+        escapeHtml(t("Sales: {count} · paid {amount} ETB", { count: sales.sales, amount: sales.paidEtb.toLocaleString("en-US") })),
+        escapeHtml(t("Course registrations: {count}", { count: sales.registrations }))
+      );
+      if (sales.unverified > 0) lines.push(escapeHtml(t("Payments not yet verified: {count}", { count: sales.unverified })));
+    }
   }
 
   if (alerts.length > 0) {

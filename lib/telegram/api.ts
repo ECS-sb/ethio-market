@@ -1,7 +1,8 @@
 import "server-only";
 import type { TgBusinessConnection, TgMessage } from "@/lib/telegram/types";
 
-const API_BASE = "https://api.telegram.org";
+/** ለሙከራ ብቻ ሊቀየር ይችላል (የውሸት የቴሌግራም ሰርቨር)፤ በproduction አይቀመጥም። */
+const API_BASE = process.env.TELEGRAM_API_BASE ?? "https://api.telegram.org";
 
 export class TelegramApiError extends Error {}
 
@@ -18,6 +19,16 @@ async function callTelegram<T>(method: string, body: Record<string, unknown>): P
   const data = (await response.json().catch(() => null)) as { ok?: boolean; result?: T; description?: string } | null;
   if (!data?.ok) throw new TelegramApiError(`${method} failed: ${data?.description ?? response.status}`);
   return data.result as T;
+}
+
+/** ቦቱ ከ20MB በታች የሆኑ ፋይሎችን ብቻ ማውረድ ይችላል። */
+export async function downloadTelegramFile(fileId: string, maxBytes: number): Promise<Buffer | null> {
+  const file = await callTelegram<{ file_path?: string; file_size?: number }>("getFile", { file_id: fileId });
+  if (!file.file_path || (file.file_size ?? 0) > maxBytes) return null;
+  const response = await fetch(`${API_BASE}/file/bot${process.env.TELEGRAM_BOT_TOKEN}/${file.file_path}`, { cache: "no-store" });
+  if (!response.ok) throw new TelegramApiError(`file download failed: ${response.status}`);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  return bytes.length > maxBytes ? null : bytes;
 }
 
 export function getBusinessConnection(businessConnectionId: string) {

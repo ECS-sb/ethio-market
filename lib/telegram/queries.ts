@@ -1,6 +1,45 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { replyStats, startOfTodayInAddis } from "@/lib/telegram/stats";
+import { aiEnabled, AI_MODEL } from "@/lib/telegram/ai";
+import { countPending } from "@/lib/telegram/analyze";
+import { replyStats, startOfTodayInAddis, summarizeDeals } from "@/lib/telegram/stats";
+
+const DAY = 24 * 60 * 60 * 1000;
+
+export async function getTelegramSales() {
+  const now = Date.now();
+  const today = startOfTodayInAddis();
+  const weekAgo = new Date(now - 7 * DAY);
+  const [deals, pending] = await Promise.all([
+    db.telegramDeal.findMany({
+      where: { dealAt: { gte: new Date(now - 30 * DAY) } },
+      orderBy: { dealAt: "desc" },
+      take: 300,
+      select: {
+        id: true,
+        kind: true,
+        item: true,
+        amountEtb: true,
+        status: true,
+        paidToCompany: true,
+        customerName: true,
+        customerPhone: true,
+        note: true,
+        dealAt: true,
+        chat: { select: { id: true, name: true, username: true, connection: { select: { ownerName: true } } } },
+      },
+    }),
+    countPending(),
+  ]);
+  return {
+    deals,
+    today: summarizeDeals(deals.filter((deal) => deal.dealAt >= today)),
+    week: summarizeDeals(deals.filter((deal) => deal.dealAt >= weekAgo)),
+    pending,
+    aiEnabled: aiEnabled(),
+    model: AI_MODEL,
+  };
+}
 
 export async function getTelegramOverview() {
   const today = startOfTodayInAddis();
@@ -74,7 +113,13 @@ export async function getTelegramChat(id: string) {
       id: true,
       name: true,
       username: true,
+      aiSummary: true,
+      analyzedAt: true,
       connection: { select: { ownerName: true, ownerUsername: true } },
+      deals: {
+        orderBy: { dealAt: "desc" },
+        select: { id: true, kind: true, item: true, amountEtb: true, status: true, paidToCompany: true, note: true, dealAt: true },
+      },
       alerts: {
         orderBy: [{ resolved: "asc" }, { createdAt: "desc" }],
         select: { id: true, type: true, severity: true, evidence: true, resolved: true, createdAt: true, messageId: true },
@@ -97,6 +142,9 @@ export async function getTelegramChat(id: string) {
       editedAt: true,
       previousText: true,
       deletedAt: true,
+      receipt: {
+        select: { isReceipt: true, provider: true, amountEtb: true, recipientName: true, recipientAccount: true, transactionId: true, toCompany: true },
+      },
     },
   });
   const flagged = new Set(chat.alerts.filter((alert) => !alert.resolved && alert.messageId).map((alert) => alert.messageId));
@@ -104,5 +152,6 @@ export async function getTelegramChat(id: string) {
     ...chat,
     messages: messages.reverse().map((message) => ({ ...message, flagged: flagged.has(message.id) })),
     truncated: messages.length === TELEGRAM_CHAT_PAGE,
+    aiEnabled: aiEnabled(),
   };
 }

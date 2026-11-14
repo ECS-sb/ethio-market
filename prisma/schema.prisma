@@ -269,6 +269,22 @@ enum TelegramAlertType {
   BANK_ACCOUNT
   SUSPICIOUS_PHRASE
   DELETED_MESSAGE
+  PAYMENT_TO_OTHER_ACCOUNT
+  DUPLICATE_RECEIPT
+  AI_SUSPICION
+}
+
+enum TelegramDealKind {
+  SALE
+  REGISTRATION
+}
+
+enum TelegramDealStatus {
+  NEGOTIATING
+  AGREED
+  PAID
+  DELIVERED
+  CANCELLED
 }
 
 enum TelegramAlertSeverity {
@@ -307,11 +323,15 @@ model TelegramChat {
   lastDirection  TelegramDirection
   lastInboundAt  DateTime?
   lastOutboundAt DateTime?
+  /// Claude የጻፈው የቻቱ አጭር ማጠቃለያ እና የተተነተነበት ጊዜ
+  aiSummary      String?
+  analyzedAt     DateTime?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
   messages TelegramMessage[]
   alerts   TelegramAlert[]
+  deals    TelegramDeal[]
 
   @@unique([connectionId, chatId])
   @@index([lastMessageAt])
@@ -329,6 +349,7 @@ model TelegramMessage {
   viaBot       Boolean           @default(false)
   text         String            @default("")
   mediaType    String?
+  mimeType     String?
   fileId       String?
   sentAt       DateTime
   editedAt     DateTime?
@@ -336,7 +357,8 @@ model TelegramMessage {
   deletedAt    DateTime?
   createdAt    DateTime          @default(now())
 
-  alerts TelegramAlert[]
+  alerts  TelegramAlert[]
+  receipt TelegramReceipt?
 
   @@unique([chatId, messageId])
   @@index([sentAt])
@@ -359,4 +381,47 @@ model TelegramAlert {
   @@index([resolved, createdAt])
   @@index([chatId])
   @@map("telegram_alert")
+}
+
+/// Claude ከቻቱ ያወጣው ሽያጭ ወይም ምዝገባ። ቻቱ በተተነተነ ቁጥር የዚያ ቻት ስምምነቶች ይተካሉ።
+model TelegramDeal {
+  id            String             @id @default(cuid())
+  chatId        String
+  chat          TelegramChat       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  kind          TelegramDealKind
+  item          String
+  amountEtb     Int?
+  status        TelegramDealStatus
+  /// true፦ ወደ ድርጅቱ ሂሳብ ተከፍሏል፤ false፦ ወደ ሌላ ሂሳብ፤ null፦ አልተረጋገጠም
+  paidToCompany Boolean?
+  customerName  String?
+  customerPhone String?
+  note          String             @default("")
+  /// ስምምነቱ ወይም ክፍያው የተፈጸመበት የመልዕክት ጊዜ
+  dealAt        DateTime
+  createdAt     DateTime           @default(now())
+
+  @@index([chatId])
+  @@index([dealAt])
+  @@map("telegram_deal")
+}
+
+/// ደንበኛ የላከው ፎቶ/ፋይል የክፍያ ደረሰኝ ከሆነ Claude ያነበበው መረጃ።
+model TelegramReceipt {
+  id               String          @id @default(cuid())
+  messageId        String          @unique
+  message          TelegramMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  isReceipt        Boolean
+  provider         String?
+  amountEtb        Float?
+  recipientName    String?
+  recipientAccount String?
+  payerName        String?
+  transactionId    String?
+  paidAt           String?
+  toCompany        Boolean?
+  createdAt        DateTime        @default(now())
+
+  @@index([transactionId])
+  @@map("telegram_receipt")
 }
