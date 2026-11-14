@@ -15,11 +15,14 @@ export function loadCompanyProfile(env: { contacts?: string; names?: string } = 
   };
 }
 
-const MASK = /[*xX•#]/;
+/** የተሸፈኑ አሃዞች (*, x, •, #) ከቁጥሮች ጋር ተጣብቀው ሲመጡ ብቻ እንደ ሽፋን ይቆጠራሉ፤ በቃላት ውስጥ ያለ x አይቆጠርም። */
+const MASKED_NUMBER = /\d*[*xX•#]+\d+|\d+[*xX•#]+/;
+const MASK_RUN = /[*xX•#]+/g;
 
 /**
- * ደረሰኙ ላይ የታተመው የተቀባይ ሂሳብ የድርጅቱ ነው? true / false፣ ወይም ለመወሰን በቂ አሃዝ ከሌለ null።
- * "1000****3735" የመሰሉ የተሸፈኑ ቁጥሮችንም ያነጻጽራል።
+ * ደረሰኙ ላይ የታተመው የተቀባይ ሂሳብ የድርጅቱ ነው? true / false፣ ወይም ለመወሰን በቂ መረጃ ከሌለ null።
+ * ሶስት አይነት አጻጻፍ ይረዳል፦ ሙሉ ቁጥር (1000543473735)፣ የተሸፈነ (1000****3735)፣
+ * እና ከጽሑፍ ጋር የተቀላቀለ (CBE አንዳንዴ "CS-ETB-3735" ብሎ የመጨረሻ አሃዞችን ብቻ ያሳያል)።
  */
 export function accountMatches(raw: string, allow: Allowlist): boolean | null {
   const compact = raw.replace(/[\s.\-()]/g, "");
@@ -27,15 +30,23 @@ export function accountMatches(raw: string, allow: Allowlist): boolean | null {
   if (visibleDigits.length < 4) return null;
   const candidates = [...allow.numbers, ...allow.phones, ...[...allow.phones].map((phone) => `251${phone.slice(1)}`)];
 
-  if (!MASK.test(compact)) {
+  if (/^\+?\d+$/.test(compact)) {
     const phone = normalizePhone(visibleDigits);
     if (phone) return allow.phones.has(phone);
     return candidates.includes(visibleDigits);
   }
 
-  const shape = compact.replace(/[^\d*xX•#]/g, "").replace(/[*xX•#]+/g, "\\d+");
-  const pattern = new RegExp(`^${shape}$`);
-  return candidates.some((candidate) => pattern.test(candidate));
+  const masked = compact.match(MASKED_NUMBER)?.[0];
+  if (masked && masked.replace(/\D/g, "").length >= 4) {
+    const pattern = new RegExp(`^${masked.replace(MASK_RUN, "\\d+")}$`);
+    return candidates.some((candidate) => pattern.test(candidate));
+  }
+
+  // ከጽሑፍ ጋር የተቀላቀለ፦ የመጨረሻው የቁጥር ክፍል ከድርጅቱ ሂሳብ መጨረሻ ጋር ይነጻጸራል።
+  const lastGroup = compact.match(/\d+/g)?.at(-1) ?? "";
+  if (lastGroup.length >= 4 && candidates.some((candidate) => candidate.endsWith(lastGroup))) return true;
+  // ጥቂት አሃዞች ብቻ ከታዩ "ሌላ ሂሳብ ነው" ለማለት በቂ አይደለም፤ ውሳኔው ለስሙ ይተዋል።
+  return visibleDigits.length >= 8 ? false : null;
 }
 
 /** የተቀባዩ ስም ከድርጅቱ ስሞች ጋር ይመሳሰላል? አጫጭር ስሞች (እንደ ECS) እንደ ሙሉ ቃል ብቻ ይቆጠራሉ። */
