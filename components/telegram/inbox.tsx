@@ -1,37 +1,15 @@
-import {
-  BadgeDollarSignIcon,
-  CircleCheckIcon,
-  ClockIcon,
-  GraduationCapIcon,
-  HandshakeIcon,
-  MessagesSquareIcon,
-  ReceiptIcon,
-  SearchIcon,
-  TriangleAlertIcon,
-  type LucideIcon,
-} from "lucide-react";
+import { SearchIcon, TriangleAlertIcon } from "lucide-react";
 import { LocaleLink } from "@/components/i18n-provider";
 import { ChatAvatar } from "@/components/telegram/chat-avatar";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/catalog";
 import { localePath, type T } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n-server";
-import { FOLDERS, folderLabels, inboxQuery, type Folder, type InboxParams } from "@/lib/telegram/folders";
+import { inboxQuery, type Folder, type InboxParams } from "@/lib/telegram/folders";
 import { chatListTime } from "@/lib/telegram/format";
 import type { Inbox as InboxData } from "@/lib/telegram/inbox";
 import { alertLabels, dealStatusLabels, evidenceText, mediaLabels } from "@/lib/telegram/labels";
 import { cn } from "@/lib/utils";
-
-const folderIcons: Record<Folder, LucideIcon> = {
-  all: MessagesSquareIcon,
-  waiting: ClockIcon,
-  alerts: TriangleAlertIcon,
-  progress: HandshakeIcon,
-  paid: CircleCheckIcon,
-  sales: BadgeDollarSignIcon,
-  registrations: GraduationCapIcon,
-  receipts: ReceiptIcon,
-};
 
 type Chat = InboxData["chats"][number];
 
@@ -71,17 +49,10 @@ export async function Inbox({
   const chatQuery = inboxQuery(params);
 
   return (
-    <aside className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-13rem)]">
-      <div className="flex flex-col gap-4 border-b border-border p-4">
-        <form action={localePath(locale, basePath)} className="relative" role="search">
-          <SearchIcon className="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input name="q" defaultValue={params.q} placeholder={t("Search chats")} aria-label={t("Search chats")} className="ps-10" autoComplete="off" />
-          {params.folder !== "all" ? <input type="hidden" name="folder" value={params.folder} /> : null}
-          {params.account ? <input type="hidden" name="account" value={params.account} /> : null}
-        </form>
-
+    <aside className="flex min-h-[32rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-18rem)] lg:min-h-[24rem]">
+      <div className="flex flex-col gap-2 border-b border-border p-3">
         {inbox.connections.length > 1 ? (
-          <div className="flex gap-2 overflow-x-auto [scrollbar-width:none]">
+          <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
             {[{ id: "", ownerName: t("All accounts") }, ...inbox.connections].map((connection) => (
               <LocaleLink
                 key={connection.id || "all"}
@@ -97,28 +68,12 @@ export async function Inbox({
             ))}
           </div>
         ) : null}
-
-        <nav aria-label={t("Folders")} className="flex flex-wrap gap-2">
-          {FOLDERS.map((folder) => {
-            const Icon = folderIcons[folder];
-            const active = params.folder === folder;
-            return (
-              <LocaleLink
-                key={folder}
-                href={`${basePath}${inboxQuery({ ...params, folder })}`}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-                  active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Icon className="size-4" />
-                {t(folderLabels[folder])}
-                <span className={cn("rounded-full px-1.5 text-[11px]", active ? "bg-primary-foreground/15" : "bg-background/60")}>{inbox.counts[folder]}</span>
-              </LocaleLink>
-            );
-          })}
-        </nav>
+        <form action={localePath(locale, basePath)} className="relative" role="search">
+          <SearchIcon className="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input name="q" defaultValue={params.q} placeholder={t("Search chats")} aria-label={t("Search chats")} className="ps-10" autoComplete="off" />
+          {params.folder !== "all" ? <input type="hidden" name="folder" value={params.folder} /> : null}
+          {params.account ? <input type="hidden" name="account" value={params.account} /> : null}
+        </form>
       </div>
 
       {inbox.chats.length === 0 ? (

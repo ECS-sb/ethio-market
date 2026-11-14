@@ -4,15 +4,16 @@ import type { MessageKey } from "@/lib/messages";
 export const FOLDERS = ["all", "waiting", "alerts", "progress", "paid", "sales", "registrations", "receipts"] as const;
 export type Folder = (typeof FOLDERS)[number];
 
+/** ሁሉም ፎልደሮች በአንድ መስመር እንዲገቡ አጫጭር ስሞች። */
 export const folderLabels: Record<Folder, MessageKey> = {
-  all: "All chats",
-  waiting: "Waiting for a reply",
-  alerts: "With alerts",
+  all: "All",
+  waiting: "Unanswered",
+  alerts: "Flagged",
   progress: "In progress",
   paid: "Paid",
   sales: "Sales",
   registrations: "Registrations",
-  receipts: "Sent receipts",
+  receipts: "Receipts",
 };
 
 export type InboxParams = { folder: Folder; q: string; account: string };

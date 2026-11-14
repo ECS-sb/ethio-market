@@ -643,10 +643,11 @@ export const am = {
   "Payments not yet verified: {count}": "ያልተረጋገጡ ክፍያዎች፦ {count}",
 
   // ---- የቴሌግራም ገጽ (እንደ ቴሌግራም ፎልደሮች)
-  "All chats": "ሁሉም ቻቶች",
   "With alerts": "ማስጠንቀቂያ ያላቸው",
   "Registrations": "ምዝገባዎች",
-  "Sent receipts": "ደረሰኝ የላኩ",
+  "Receipts": "ደረሰኞች",
+  "Unanswered": "የሚጠብቁ",
+  "Flagged": "ማስጠንቀቂያ",
   "Folders": "ፎልደሮች",
   "Search chats": "ቻት ፈልግ (ስም ወይም @username)",
   "All accounts": "ሁሉም አካውንቶች",

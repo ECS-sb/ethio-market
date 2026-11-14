@@ -90,7 +90,7 @@ export async function ChatView({ chat, backHref }: { chat: ChatData; backHref: s
   return (
     <section
       aria-label={t("Chat with {name}", { name: chat.name })}
-      className="flex h-[calc(100dvh-9rem)] min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-13rem)] lg:min-h-[32rem]"
+      className="flex h-[calc(100dvh-9rem)] min-h-[28rem] min-w-0 flex-col overflow-hidden rounded-xl bg-card/70 ring-1 ring-foreground/10 lg:h-[calc(100dvh-18rem)] lg:min-h-[24rem]"
     >
       <header className="flex items-center gap-3 border-b border-border p-4">
         <LocaleLink href={backHref} aria-label={t("Back to chats")} className="text-muted-foreground hover:text-foreground lg:hidden">
@@ -132,7 +132,7 @@ export async function ChatView({ chat, backHref }: { chat: ChatData; backHref: s
             ) : null}
             <ChevronDownIcon className="ms-auto size-4 text-muted-foreground transition-transform group-open:rotate-180" />
           </summary>
-          <div className="flex max-h-72 flex-col gap-4 overflow-y-auto px-4 pb-4 text-sm">
+          <div className="flex max-h-52 flex-col gap-4 overflow-y-auto px-4 pb-4 text-sm">
             {openAlerts.map((alert) => (
               <div key={alert.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-destructive/10 p-3">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">

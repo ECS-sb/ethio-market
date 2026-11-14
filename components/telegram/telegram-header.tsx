@@ -2,7 +2,7 @@ import { getT } from "@/lib/i18n-server";
 import type { Inbox } from "@/lib/telegram/inbox";
 import { cn } from "@/lib/utils";
 
-/** ከላይ ያለው አጭር ማጠቃለያ፦ ጠቅላላ ሰዎች፣ የዛሬ መልዕክቶች፣ የምላሽ ጊዜ እና የተገናኙ አካውንቶች። */
+/** ከላይ ያሉት ቁጥሮች፦ ጠቅላላ ሰዎች፣ የዛሬ መልዕክቶች፣ የምላሽ ጊዜ፣ የሚጠብቁ እና ማስጠንቀቂያ። ርዕሱ ቦታ ለመቆጠብ ለስክሪን አንባቢ ብቻ ነው። */
 export async function TelegramHeader({ inbox }: { inbox: Inbox }) {
   const t = await getT();
   const stats = [
@@ -18,20 +18,8 @@ export async function TelegramHeader({ inbox }: { inbox: Inbox }) {
   ];
 
   return (
-    <header className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-3xl font-semibold">{t("Telegram monitoring")}</h1>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          {inbox.connections.length === 0 ? <span>{t("No Telegram account is connected yet.")}</span> : null}
-          {inbox.connections.map((connection) => (
-            <span key={connection.id} className="flex items-center gap-1.5">
-              <span className={cn("size-2 rounded-full", connection.isEnabled ? "bg-primary" : "bg-muted-foreground")} />
-              {connection.ownerName}
-              {connection.isEnabled ? null : ` · ${t("Paused")}`}
-            </span>
-          ))}
-        </div>
-      </div>
+    <header>
+      <h1 className="sr-only">{t("Telegram monitoring")}</h1>
       <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
         {stats.map((stat) => (
           <div key={stat.label} className="flex flex-col rounded-xl bg-card/70 px-4 py-3 ring-1 ring-foreground/10">

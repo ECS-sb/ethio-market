@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { ChatView } from "@/components/telegram/chat-view";
+import { FolderBar } from "@/components/telegram/folder-bar";
 import { Inbox } from "@/components/telegram/inbox";
 import { TelegramHeader } from "@/components/telegram/telegram-header";
 import { pageTitle } from "@/lib/i18n-server";
@@ -32,8 +33,9 @@ export default async function AdminTelegramChatPage({
     <>
       <AutoRefresh intervalMs={20000} />
       {/* በስልክ ላይ ቻቱ ብቻ ይታያል፤ ዝርዝሩ በ"ተመለስ" ቀስት ይመጣል። */}
-      <div className="hidden lg:block">
+      <div className="hidden flex-col gap-4 lg:flex">
         <TelegramHeader inbox={inbox} />
+        <FolderBar inbox={inbox} params={inboxParams} basePath={`/admin/telegram/${id}`} />
       </div>
       <div className="grid min-w-0 gap-6 lg:grid-cols-[22rem_1fr]">
         <div className="hidden min-w-0 lg:block">
